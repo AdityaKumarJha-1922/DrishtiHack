@@ -54,12 +54,17 @@ lens_suggestions:
     when: { all: [ { field: person.age, op: ">=", value: 60 }, { field: answer.walking, op: "==", value: yes } ] }
 
 messages:
-  # Customer-facing wording. Hindi text here is a DRAFT: there is no
-  # approved clinical wording yet. Do not ship to customers before approval.
-  red_customer_hi: "[DRAFT, needs approval] Kripya aaj hi aankh ke doctor ko dikhaiye."
+  # Customer-facing wording. There is no approved clinical wording yet: see
+  # message_approval below. The app tells the shopkeeper while it is a draft.
+  red_customer_hi: "Kripya aaj hi aankh ke doctor ko dikhaiye."
   red_shopkeeper_en: "Danger sign reported. Stop here: refer to an eye doctor today. Case marked urgent for the optometrist."
+  draft_message_en: "The customer's message above is DRAFT wording, not yet approved by the clinical lead."
   done_customer_hi: "Dhanyavaad. Ab kuch aasaan jaanch hogi."
   retina_check_reason: yearly_retina_check
+
+# Set a message to true only after the clinical lead approves its exact wording.
+message_approval:
+  red_customer_hi: false
 
 speech:
   # TECHNICAL setting, not clinical (provisional, needs review): a voice answer

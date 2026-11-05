@@ -10,3 +10,4 @@ export type { Question, Option } from "./data";
 export { replySchema, questionForModel, parseReply, dangerWordsIn } from "./understanding";
 export type { ModelReply, Understanding } from "./understanding";
 export { voiceAction, readbackText, parseYesNo, isDangerValue } from "./readback";
+export { isUrgent, reportDangerLater, reportableDangerSigns, LATE_REPORT_PREFIX } from "./danger";

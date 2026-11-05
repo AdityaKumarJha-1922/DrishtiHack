@@ -59,6 +59,19 @@ reply is matched against `yes_words` / `no_words` as whole words; both or neithe
 means unclear and the customer taps. After `max_readback_rejections` "Nahin" replies,
 voice is off for that question. The shopkeeper's Next is disabled during a read-back.
 
+## Danger signs (Step 4)
+
+- Sources: a danger answer to `danger_signs` (each chosen code), a "yes" to
+  `recent_change` (`recent_change_on_medicine_or_diabetes`), or the shopkeeper's
+  "Report danger sign" (`reported_later:<code>`, codes from the `danger_signs`
+  question's `danger` list only).
+- Any danger sign: the interview stops (`nextQuestion()` is null, `applyAnswer()`
+  and `undoLast()` refuse), triage is Red with `danger_sign:<code>` reasons, the
+  suggestion is "doctor" with no power or lenses. `isUrgent()` is true.
+- One-way: there is no function that removes a danger sign.
+- Customer message: `messages.red_customer_hi`, shown with a repeat button. Until
+  `message_approval.red_customer_hi` is true, the shopkeeper sees a draft notice.
+
 ## Triage (v0, from rules.yaml)
 
 - **Red:** any danger sign; diabetes or TB medicine with a recent vision change;

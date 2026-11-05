@@ -5,10 +5,12 @@
 // object; calling its setter redraws the screen with the new value.
 import { useState } from "react";
 import {
-  applyAnswer, createCase, isStopped, nextQuestion, progress, undoLast, voiceAction, RULES,
+  applyAnswer, createCase, isStopped, nextQuestion, progress, reportDangerLater, reportableDangerSigns,
+  undoLast, voiceAction, RULES,
   type AnswerMeta, type AnswerValue, type CaseRecord, type Understanding,
 } from "../brain";
 import QuestionScreen from "./QuestionScreen";
+import { speak } from "../services/tts";
 
 const SHOP_ID = "shop-01"; // set per shop later
 
@@ -28,6 +30,8 @@ export default function App() {
   const [voice, setVoice] = useState<{ u: Understanding; transcript: string | null } | null>(null);
   // True while the customer is being asked to confirm a read-back.
   const [readbackActive, setReadbackActive] = useState(false);
+  // Shopkeeper's "Report danger sign" picker.
+  const [showReport, setShowReport] = useState(false);
 
   const question = nextQuestion(record);
   const stopped = isStopped(record);
@@ -74,13 +78,34 @@ export default function App() {
     }
   }
 
+  // Escalation only: adds a danger sign; can never remove one.
+  function reportDanger(code: string) {
+    if (!window.confirm(`Mark this case RED (urgent) for: ${label(code)}? This cannot be undone.`)) return;
+    const result = reportDangerLater(record, code);
+    if (result.ok) {
+      setRecord(result.record);
+      setPending(null);
+      setVoice(null);
+      setReadbackActive(false);
+      setShowReport(false);
+      setError(null);
+    } else {
+      setError(result.error);
+    }
+  }
+
   function startOver() {
-    if (window.confirm("Start a new case? The current one is not saved yet.")) {
+    // Until saving exists (Step 5), a new case discards this one. Warn hard for Red.
+    const warning = stopped
+      ? "This is an URGENT (Red) case and it is NOT saved yet. Make sure the customer has been told to see an eye doctor today. Start a new case anyway?"
+      : "Start a new case? The current one is not saved yet.";
+    if (window.confirm(warning)) {
       setRecord(newCase());
       setPending(null);
       setError(null);
       setVoice(null);
       setReadbackActive(false);
+      setShowReport(false);
     }
   }
 
@@ -90,6 +115,9 @@ export default function App() {
         {stopped ? (
           <div className="end-screen red">
             <p className="big">{RULES.messages.red_customer_hi}</p>
+            <button className="repeat" onClick={() => speak(RULES.messages.red_customer_hi)} aria-label="Dobara suniye">
+              🔁 Dobara suniye
+            </button>
           </div>
         ) : question ? (
           <>
@@ -125,7 +153,13 @@ export default function App() {
           <span className="muted">Case {record.case_id}</span>
         </div>
 
-        {stopped && <p className="sk-alert">{RULES.messages.red_shopkeeper_en}</p>}
+        {stopped && (
+          <div className="sk-alert">
+            <p>{RULES.messages.red_shopkeeper_en}</p>
+            <p>Danger signs: {record.danger_signs.map(label).join("; ")}</p>
+          </div>
+        )}
+        {stopped && !RULES.message_approval.red_customer_hi && <p className="sk-note">{RULES.messages.draft_message_en}</p>}
         {!stopped && !question && (
           <p className="sk-note">
             Interview complete. Tests come next (M2). Nothing here is final until the remote optometrist reviews the case.
@@ -141,6 +175,20 @@ export default function App() {
           <button disabled title="Needs an audit field in the case record: decision pending">Override</button>
         </div>
         <div className="sk-buttons">
+          <button className="danger" onClick={() => setShowReport(!showReport)} aria-expanded={showReport}>
+            Report danger sign
+          </button>
+        </div>
+        {showReport && (
+          <div className="sk-report">
+            <p>Customer mentions one of these now? Pick it to mark the case Red (urgent):</p>
+            {reportableDangerSigns().map((code) => (
+              <button key={code} className="danger" onClick={() => reportDanger(code)}>{label(code)}</button>
+            ))}
+            <button className="ghost" onClick={() => setShowReport(false)}>Cancel</button>
+          </div>
+        )}
+        <div className="sk-buttons">
           <button className="ghost" onClick={() => setShowJson(!showJson)}>{showJson ? "Hide" : "Show"} case record</button>
           <button className="ghost" onClick={startOver}>New case</button>
         </div>
@@ -148,6 +196,13 @@ export default function App() {
       </section>
     </div>
   );
+}
+
+// "reported_later:painful_red_eye" -> "painful red eye (reported later)"
+function label(code: string): string {
+  const later = code.startsWith("reported_later:");
+  const base = (later ? code.slice("reported_later:".length) : code).replace(/_/g, " ");
+  return later ? `${base} (reported later)` : base;
 }
 
 // Shopkeeper view of the last voice attempt. Raw transcripts are shown here
@@ -158,7 +213,7 @@ function VoicePanel({ u, transcript }: { u: Understanding; transcript: string | 
       {u.dangerWordsHeard.length > 0 && (
         <p className="sk-alert">
           Possible danger words heard: {u.dangerWordsHeard.join(", ")}. Check with the customer now. If they have this
-          now, stop and refer to an eye doctor today.
+          now, use "Report danger sign".
         </p>
       )}
       {transcript && <p>Heard: “{transcript}”</p>}

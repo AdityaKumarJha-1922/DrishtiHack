@@ -54,6 +54,7 @@ export interface Rules {
   };
   lens_suggestions: { code: string; when: Condition }[];
   messages: Record<string, string>;
+  message_approval: Record<string, boolean>;
   speech: {
     readback_below_confidence: number;
     readback_template_hi: string;

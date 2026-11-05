@@ -6,6 +6,7 @@
 // (Python comparison: like returning a deep copy instead of mutating a dict.)
 import { evaluate } from "./conditions";
 import { createCase } from "./caseRecord";
+import { markRed } from "./danger";
 import { QUESTIONS, getQuestion, type Question } from "./data";
 import type { AnswerValue, CaseRecord } from "./types";
 
@@ -121,7 +122,7 @@ function applyDanger(record: CaseRecord, q: Question, value: AnswerValue): void 
   // For multi questions the value itself is the code; yes/no questions name one.
   const codes = q.type === "multi" ? hits : [q.danger_code ?? q.id];
   for (const c of codes) if (!record.danger_signs.includes(c)) record.danger_signs.push(c);
-  record.triage = { result: "red", reasons: record.danger_signs.map((d) => `danger_sign:${d}`) };
+  markRed(record);
 }
 
 /**

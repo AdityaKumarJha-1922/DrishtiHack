@@ -28,7 +28,7 @@ npm run build      # type-check + production build
 | `data/symptom_words.csv`, `data/occupations.csv` | Word list and job table (clinical lead edits). |
 | `tests/` | Vitest: golden cases and interview flow. |
 
-## Status (M1, Steps 1 to 3 done)
+## Status (M1, Steps 1 to 4 done)
 
 Step 1: brain module, data files, tap interview screen with truthful progress,
 repeat button, Next/Redo in the shopkeeper panel, Red stop that Redo cannot undo.
@@ -43,7 +43,14 @@ Step 3: voice answers to key questions (`readback: true` in `questions.yaml`), a
 low-confidence or danger-word answer, are read back from a fixed template
 ("Aapne kaha: … Kya yeh sahi hai?") and confirmed by a tap or a spoken haan/nahin
 (read locally, no LLM). Two "Nahin" replies switch voice off for that question.
-A voice danger answer is saved at once, never read back. 40 passing tests.
+A voice danger answer is saved at once, never read back.
+
+Step 4: danger signs are one-way, enforced in the brain (`src/brain/danger.ts`):
+no answer, retry, Redo, model reply or network failure can clear or soften Red,
+and `decide()` keeps Red even when every test would give Green. "Urgent" is derived
+(`isUrgent()` = has a danger sign), not stored twice. The shopkeeper can "Report
+danger sign" at any point (escalation only, stored as `reported_later:<code>`).
+The Red screen has a repeat button. 57 passing tests.
 
 Not yet: saving to Supabase (Step 5), real-phone
 latency (Step 6), phone tests (M2), optometrist portal, offline service worker.
@@ -77,8 +84,12 @@ Hindi recognition when online).
   lists (`rules.yaml`) and which questions are key (`questions.yaml`) need the
   clinical lead's review. Tap answers are not read back: the visible selection
   plus "Aage" is the confirmation.
-- **Danger words heard later** (after the danger question) raise a shopkeeper alert
-  but cannot yet be recorded in the case: there is no "late danger sign" path.
+- **Red safety message is not approved.** `message_approval.red_customer_hi: false`
+  in `rules.yaml`; the shopkeeper sees a draft notice until it is set to true.
+- **New case discards an unsaved Red case** (after a strong warning). Step 5 must
+  block "New case" until a Red case is saved.
+- **Late danger reports** have no "who reported" field; the `reported_later:` code
+  prefix is the only marker. Audit fields need a schema decision.
 - **Devanagari danger phrases** were added to `symptom_words.csv` because Sarvam and
   Chrome return Hindi in Devanagari; they are dev transliterations to be checked.
 - `created_at` is stored in UTC (`Z`) rather than `+05:30`; both are valid ISO times.
