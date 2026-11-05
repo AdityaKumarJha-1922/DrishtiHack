@@ -17,6 +17,11 @@
 #   ask_if    condition; the question is skipped when it is false
 #   danger    which answer values are danger signs (stop + Red). For multi the
 #             value itself is recorded; for yes_no, danger_code is recorded.
+#   readback  true = a key answer: a VOICE answer is always read back for a yes/no
+#             before it is saved (dev proposal for the key list; clinical lead to confirm).
+#             Any voice answer with low confidence or danger words heard is read back too.
+#             A voice answer that is itself a danger sign is never read back: it stops at once.
+#   unit_hi   word said after a number in the read-back (e.g. "52 saal")
 
 version: 0
 draft_labels: true
@@ -30,6 +35,7 @@ questions:
   - id: main_problem
     text_hi: "Aankhon mein kya pareshani hai?"
     type: multi
+    readback: true
     none_value: none
     options:
       - { value: near_blur, label_hi: "Paas ka dhundhla dikhta hai" }
@@ -42,6 +48,7 @@ questions:
   - id: danger_signs
     text_hi: "Achanak kam dikhna, bijli chamakna, aankh mein dard ya laali?"
     type: multi
+    readback: true
     none_value: none
     options:
       - { value: sudden_vision_loss, label_hi: "Achanak kam dikhna" }
@@ -57,6 +64,8 @@ questions:
   - id: age
     text_hi: "Aapki umar kitni hai?"
     type: number
+    readback: true
+    unit_hi: saal
     min: 5
     max: 110
     fills: { path: person.age }
@@ -64,6 +73,7 @@ questions:
   - id: occupation
     text_hi: "Aap kya kaam karte hain?"
     type: choice
+    readback: true
     options:
       - { value: tailor, label_hi: "Silai / darzi" }
       - { value: shopkeeper, label_hi: "Dukaan" }
@@ -81,6 +91,7 @@ questions:
   - id: near_work
     text_hi: "Kaam ki cheez kitni paas rakhte hain? Phone ko waise pakadiye."
     type: choice
+    readback: true
     note: "Step 1 records hours only. The camera measures working distance in M2."
     options:
       - { value: 0, label_hi: "Paas ka kaam nahin" }
@@ -94,6 +105,7 @@ questions:
   - id: phone_reading
     text_hi: "Phone par kya karte hain: WhatsApp, video, padhna?"
     type: choice
+    readback: true
     options:
       - { value: 0, label_hi: "Phone kam chalate hain" }
       - { value: 1, label_hi: "Lagbhag 1 ghanta" }
@@ -140,6 +152,7 @@ questions:
   - id: health
     text_hi: "Sugar, BP, TB ki dawai? Aankh mein koi dawai daalte hain?"
     type: multi
+    readback: true
     none_value: none
     options:
       - { value: diabetes, label_hi: "Sugar" }
@@ -154,6 +167,7 @@ questions:
   - id: recent_change
     text_hi: "Kya haal mein aapki nazar badli hai?"
     type: yes_no
+    readback: true
     ask_if: { any: [ { field: risks.diabetes, op: "==", value: true }, { field: risks.tb_medicine, op: "==", value: true } ] }
     danger: [yes]
     danger_code: recent_change_on_medicine_or_diabetes
@@ -162,6 +176,7 @@ questions:
   - id: eye_history
     text_hi: "Aankh ka operation ya chot?"
     type: multi
+    readback: true
     none_value: none
     options:
       - { value: eye_surgery, label_hi: "Operation hua hai" }
@@ -173,6 +188,7 @@ questions:
   - id: walking
     text_hi: "Khet ki mendh ya seedhi par chalna hota hai?"
     type: yes_no
+    readback: true
     ask_if: { field: person.age, op: ">=", value: 60 }
     fills: { path: answers_only }
 

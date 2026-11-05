@@ -73,3 +73,8 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .voice-note { font-size: 19px; color: #1e3a8a; margin: 8px 0 0; }
 .sk-voice { background: #334155; padding: 8px; border-radius: 6px; margin-top: 8px; }
 .sk-voice p { margin: 4px 0; }
+
+/* Step 3: read-back */
+.asked { font-size: 17px; color: #555; margin: 4px 0 0; }
+.choice.confirm-yes { border-color: #15803d; }
+.choice.confirm-no { border-color: #b91c1c; }

@@ -28,7 +28,7 @@ npm run build      # type-check + production build
 | `data/symptom_words.csv`, `data/occupations.csv` | Word list and job table (clinical lead edits). |
 | `tests/` | Vitest: golden cases and interview flow. |
 
-## Status (M1, Steps 1 and 2 done)
+## Status (M1, Steps 1 to 3 done)
 
 Step 1: brain module, data files, tap interview screen with truthful progress,
 repeat button, Next/Redo in the shopkeeper panel, Red stop that Redo cannot undo.
@@ -37,9 +37,15 @@ Step 2: Edge Functions `stt`, `tts`, `understand` (see `supabase/README.md`);
 voice answers after consent, which only pre-select an option the customer
 confirms by tap; the brain's gate (`src/brain/understanding.ts`) rejects any
 model reply that is malformed, off-question or outside the allowed values, and
-takes the safer route when danger words are heard. 33 passing tests.
+takes the safer route when danger words are heard.
 
-Not yet: spoken read-back (Step 3), saving to Supabase (Step 5), real-phone
+Step 3: voice answers to key questions (`readback: true` in `questions.yaml`), and any
+low-confidence or danger-word answer, are read back from a fixed template
+("Aapne kaha: … Kya yeh sahi hai?") and confirmed by a tap or a spoken haan/nahin
+(read locally, no LLM). Two "Nahin" replies switch voice off for that question.
+A voice danger answer is saved at once, never read back. 40 passing tests.
+
+Not yet: saving to Supabase (Step 5), real-phone
 latency (Step 6), phone tests (M2), optometrist portal, offline service worker.
 
 ## Voice setup
@@ -67,6 +73,10 @@ Hindi recognition when online).
   model on refusal or unavailability; the app falls back to taps instead.
 - **Read-back threshold** `speech.readback_below_confidence: 0.8` in `rules.yaml` is
   a provisional technical setting, not clinical; it needs review.
+- **Read-back wording and key list are drafts.** The template, the yes/no word
+  lists (`rules.yaml`) and which questions are key (`questions.yaml`) need the
+  clinical lead's review. Tap answers are not read back: the visible selection
+  plus "Aage" is the confirmation.
 - **Danger words heard later** (after the danger question) raise a shopkeeper alert
   but cannot yet be recorded in the case: there is no "late danger sign" path.
 - **Devanagari danger phrases** were added to `symptom_words.csv` because Sarvam and

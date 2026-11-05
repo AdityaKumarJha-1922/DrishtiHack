@@ -1,11 +1,11 @@
-// Step 1 screen: the customer interview (top) and the shopkeeper panel (bottom).
+// The interview screen: the customer interview (top) and the shopkeeper panel (bottom).
 //
 // React note for Python readers: a component is a function that returns what
 // to draw. `useState` keeps a value between redraws, like an attribute on an
 // object; calling its setter redraws the screen with the new value.
 import { useState } from "react";
 import {
-  applyAnswer, createCase, isStopped, nextQuestion, progress, undoLast, RULES,
+  applyAnswer, createCase, isStopped, nextQuestion, progress, undoLast, voiceAction, RULES,
   type AnswerMeta, type AnswerValue, type CaseRecord, type Understanding,
 } from "../brain";
 import QuestionScreen from "./QuestionScreen";
@@ -26,27 +26,39 @@ export default function App() {
   // What voice understanding last produced, shown to the shopkeeper. Its
   // transcript and confidence are saved only if the customer keeps that answer.
   const [voice, setVoice] = useState<{ u: Understanding; transcript: string | null } | null>(null);
+  // True while the customer is being asked to confirm a read-back.
+  const [readbackActive, setReadbackActive] = useState(false);
 
   const question = nextQuestion(record);
   const stopped = isStopped(record);
   const { answered, atMost } = progress(record);
 
   // Every answer goes through the brain; a rejected answer changes nothing.
-  function submit() {
-    if (!question || pending === null) return;
-    const fromVoice = voice?.u.kind === "answer" && JSON.stringify(voice.u.value) === JSON.stringify(pending);
-    const meta: AnswerMeta = fromVoice && voice?.u.kind === "answer"
-      ? { transcript: voice.transcript, confidence: voice.u.confidence, confirmed: true }
-      : {}; // a tap answer
-    const result = applyAnswer(record, question.id, pending, meta);
+  function commit(value: AnswerValue, meta: AnswerMeta) {
+    if (!question) return;
+    const result = applyAnswer(record, question.id, value, meta);
     if (result.ok) {
       setRecord(result.record);
       setPending(null);
       setError(null);
       setVoice(null);
+      setReadbackActive(false);
     } else {
       setError(result.error);
     }
+  }
+
+  // "Aage" or the shopkeeper's "Next". Voice details are kept only when the
+  // customer confirms the exact option voice pre-selected; anything else is a tap.
+  function submit() {
+    if (!question || pending === null || readbackActive) return;
+    const u = voice?.u;
+    const keptVoice = u?.kind === "answer" && voiceAction(question, u) === "preselect"
+      && JSON.stringify(u.value) === JSON.stringify(pending);
+    const meta: AnswerMeta = keptVoice && u?.kind === "answer"
+      ? { transcript: voice!.transcript, confidence: u.confidence, confirmed: true }
+      : {}; // a tap answer
+    commit(pending, meta);
   }
 
   function redo() {
@@ -56,6 +68,7 @@ export default function App() {
       setPending(null);
       setError(null);
       setVoice(null);
+      setReadbackActive(false);
     } else {
       setError(result.error);
     }
@@ -67,6 +80,7 @@ export default function App() {
       setPending(null);
       setError(null);
       setVoice(null);
+      setReadbackActive(false);
     }
   }
 
@@ -93,6 +107,8 @@ export default function App() {
               onSubmit={submit}
               voiceAllowed={record.consent.given === true}
               onVoice={(u, transcript) => setVoice({ u, transcript })}
+              onApplyNow={commit}
+              onReadbackChange={setReadbackActive}
             />
             {error && <p className="retry" role="alert">Kripya dobara chuniye.</p>}
           </>
@@ -117,9 +133,10 @@ export default function App() {
         )}
         {error && <p className="sk-error">Not accepted: {error}</p>}
         {voice && <VoicePanel u={voice.u} transcript={voice.transcript} />}
+        {readbackActive && <p className="sk-note">Read-back: waiting for the customer to say or tap Haan / Nahin.</p>}
 
         <div className="sk-buttons">
-          <button onClick={submit} disabled={!question || pending === null}>Next</button>
+          <button onClick={submit} disabled={!question || pending === null || readbackActive}>Next</button>
           <button onClick={redo} disabled={stopped || record.answers.length === 0}>Redo</button>
           <button disabled title="Needs an audit field in the case record: decision pending">Override</button>
         </div>
@@ -147,8 +164,9 @@ function VoicePanel({ u, transcript }: { u: Understanding; transcript: string | 
       {transcript && <p>Heard: “{transcript}”</p>}
       {u.kind === "answer" && (
         <p>
-          Voice pre-selected an answer (confidence {u.confidence.toFixed(2)}
-          {u.needsReadback ? ", low: confirm with the customer" : ""}). Customer must confirm with a tap.
+          Voice answer, confidence {u.confidence.toFixed(2)}
+          {u.confidence < RULES.speech.readback_below_confidence ? " (low)" : ""}. Saved only after the customer
+          confirms; a danger answer is saved at once.
         </p>
       )}
       {u.kind === "unclear" && <p>Voice answer unclear. Customer should tap.</p>}

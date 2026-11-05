@@ -31,6 +31,8 @@ export interface Question {
   ask_if?: Condition;
   danger?: string[];
   danger_code?: string;
+  readback?: boolean; // key answer: a voice answer is read back before saving
+  unit_hi?: string; // said after a number in the read-back
   fills: Fill;
 }
 
@@ -52,7 +54,13 @@ export interface Rules {
   };
   lens_suggestions: { code: string; when: Condition }[];
   messages: Record<string, string>;
-  speech: { readback_below_confidence: number };
+  speech: {
+    readback_below_confidence: number;
+    readback_template_hi: string;
+    max_readback_rejections: number;
+    yes_words: string[];
+    no_words: string[];
+  };
 }
 
 export interface SymptomWord {

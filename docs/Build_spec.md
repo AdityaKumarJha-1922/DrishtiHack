@@ -39,8 +39,25 @@ See `src/brain/types.ts`. Change log against the shared spec:
   rejected when danger words from `symptom_words.csv` are in the transcript.
 - A gated answer only pre-selects an option; the customer confirms by tap. Its
   transcript and confidence are saved in `answers[]` only if kept.
-- `speech.readback_below_confidence` (rules.yaml, provisional): below it, Step 3
-  must read the answer back. Confidence never affects triage.
+- `speech.readback_below_confidence` (rules.yaml, provisional): below it, the
+  answer is read back. Confidence never affects triage.
+
+## Read-back (Step 3)
+
+`voiceAction()` in `src/brain/readback.ts` decides what happens to a gated voice answer:
+
+| Case | Action |
+| --- | --- |
+| The value is a danger answer | Saved at once (`confirmed: false`); never read back, so "Nahin" can't undo it |
+| Key question (`readback: true`), low confidence, or danger words heard | Read back; saved only on Haan (`confirmed: true`) |
+| Other questions, high confidence | Pre-selected; saved when the customer taps "Aage" |
+| Unclear or rejected | Customer taps |
+
+The read-back sentence is `speech.readback_template_hi` filled with the question's
+own option labels (numbers use `unit_hi`), so it cannot change the answer. A spoken
+reply is matched against `yes_words` / `no_words` as whole words; both or neither
+means unclear and the customer taps. After `max_readback_rejections` "Nahin" replies,
+voice is off for that question. The shopkeeper's Next is disabled during a read-back.
 
 ## Triage (v0, from rules.yaml)
 
