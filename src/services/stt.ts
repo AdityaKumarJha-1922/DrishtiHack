@@ -47,7 +47,9 @@ export function voiceRoute(): VoiceRoute {
  */
 export interface Listening {
   stop(): void;
-  result: Promise<CallResult<{ transcript: string }>>;
+  // `audio` is the recording (Sarvam route only); it is kept in memory until the
+  // case is saved, and uploaded only if the customer consented (Step 5).
+  result: Promise<CallResult<{ transcript: string; audio?: Blob }>>;
 }
 
 export async function startListening(route: Exclude<VoiceRoute, null>): Promise<CallResult<Listening>> {
@@ -71,7 +73,7 @@ async function recordForSarvam(): Promise<CallResult<Listening>> {
   recorder.start();
   const timer = setTimeout(() => recorder.state !== "inactive" && recorder.stop(), MAX_RECORD_MS);
 
-  const result = (async (): Promise<CallResult<{ transcript: string }>> => {
+  const result = (async (): Promise<CallResult<{ transcript: string; audio?: Blob }>> => {
     await stopped;
     clearTimeout(timer);
     stream.getTracks().forEach((t) => t.stop()); // turn the mic off
@@ -79,8 +81,8 @@ async function recordForSarvam(): Promise<CallResult<Listening>> {
     if (audio.size === 0) return { ok: false, reason: "empty_audio" };
     const form = new FormData();
     form.append("file", audio, "answer.webm");
-    // The audio is sent for transcription only; it is not stored (storage is Step 5).
-    return callFunction<{ transcript: string }>("stt", form, STT_TIMEOUT_MS);
+    const r = await callFunction<{ transcript: string }>("stt", form, STT_TIMEOUT_MS);
+    return r.ok ? { ok: true, data: { transcript: r.data.transcript, audio } } : r;
   })();
 
   return { ok: true, data: { stop: () => recorder.state !== "inactive" && recorder.stop(), result } };

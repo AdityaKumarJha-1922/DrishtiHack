@@ -28,7 +28,7 @@ npm run build      # type-check + production build
 | `data/symptom_words.csv`, `data/occupations.csv` | Word list and job table (clinical lead edits). |
 | `tests/` | Vitest: golden cases and interview flow. |
 
-## Status (M1, Steps 1 to 4 done)
+## Status (M1, Steps 1 to 5 done)
 
 Step 1: brain module, data files, tap interview screen with truthful progress,
 repeat button, Next/Redo in the shopkeeper panel, Red stop that Redo cannot undo.
@@ -50,9 +50,19 @@ no answer, retry, Redo, model reply or network failure can clear or soften Red,
 and `decide()` keeps Red even when every test would give Green. "Urgent" is derived
 (`isUrgent()` = has a danger sign), not stored twice. The shopkeeper can "Report
 danger sign" at any point (escalation only, stored as `reported_later:<code>`).
-The Red screen has a repeat button. 57 passing tests.
+The Red screen has a repeat button.
 
-Not yet: saving to Supabase (Step 5), real-phone
+Step 5: finished cases save automatically through the `save_case` and `save_audio`
+Edge Functions (service role). The `cases` table and the private `case-audio` bucket
+have RLS on with no public policies; the app's anon key can't touch them. The server
+checks the exact canonical shape (`supabase/functions/_shared/case_shape.ts`) and
+refuses saves that drop a danger sign, set a review, or change a reviewed case; a
+database trigger also blocks danger-sign removal. Audio uploads only with consent,
+and its private path goes in `answers[i].audio_url`. The shopkeeper sees "Saved" only
+when the server confirmed it; "New case" stays disabled until a Red case is saved
+(only a failed save allows discarding it, after a hard warning). 69 passing tests.
+
+Not yet: real-phone
 latency (Step 6), phone tests (M2), optometrist portal, offline service worker.
 
 ## Voice setup
@@ -86,8 +96,13 @@ Hindi recognition when online).
   plus "Aage" is the confirmation.
 - **Red safety message is not approved.** `message_approval.red_customer_hi: false`
   in `rules.yaml`; the shopkeeper sees a draft notice until it is set to true.
-- **New case discards an unsaved Red case** (after a strong warning). Step 5 must
-  block "New case" until a Red case is saved.
+- **Anyone with the anon key can call `save_case`.** Shops should sign in (Supabase
+  Auth) so a case is tied to a real shop; `shop_id` is a fixed placeholder for now.
+- **No audio retention period** is applied: the spec has none. Needs a decision.
+- **No offline queue:** a case that can't be saved while offline stays only in the
+  browser tab until "Save again" works (offline mode is a Should item).
+- **Chrome's speech fallback keeps no audio**, so those answers have no recording.
+- **Consent is a tap,** so `consent.audio_url` stays null (the spec mentions voice consent).
 - **Late danger reports** have no "who reported" field; the `reported_later:` code
   prefix is the only marker. Audit fields need a schema decision.
 - **Devanagari danger phrases** were added to `symptom_words.csv` because Sarvam and

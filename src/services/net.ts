@@ -24,7 +24,7 @@ export function isOnline(): boolean {
 }
 
 export async function callFunction<T>(
-  name: "stt" | "tts" | "understand",
+  name: "stt" | "tts" | "understand" | "save_case" | "save_audio",
   body: BodyInit | object,
   timeoutMs: number,
   config = functionsConfig(),

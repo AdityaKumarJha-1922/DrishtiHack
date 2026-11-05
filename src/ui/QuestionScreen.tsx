@@ -18,14 +18,15 @@ interface Props {
   onChange: (v: AnswerValue | null) => void;
   onSubmit: () => void;
   voiceAllowed: boolean; // only after the customer said yes to recording
-  onVoice: (u: Understanding, transcript: string | null) => void;
+  // `audio` is the recording behind a voice answer (kept only until the case is saved).
+  onVoice: (u: Understanding, transcript: string | null, audio?: Blob) => void;
   // Saves an answer straight away (a confirmed read-back, or a danger answer).
-  onApplyNow: (value: AnswerValue, meta: AnswerMeta) => void;
+  onApplyNow: (value: AnswerValue, meta: AnswerMeta, audio?: Blob) => void;
   onReadbackChange: (active: boolean) => void;
 }
 
 type VoiceState = "idle" | "listening" | "working";
-interface Readback { value: AnswerValue; transcript: string; confidence: number; text: string }
+interface Readback { value: AnswerValue; transcript: string; confidence: number; text: string; audio?: Blob }
 
 const PLEASE_TAP = "Samajh nahin aaya. Kripya neeche se chuniye.";
 
@@ -56,7 +57,7 @@ export default function QuestionScreen(props: Props) {
   }
 
   // Records once and returns the transcript (or why there is none).
-  async function listenOnce(): Promise<CallResult<{ transcript: string }>> {
+  async function listenOnce(): Promise<CallResult<{ transcript: string; audio?: Blob }>> {
     if (!route) return { ok: false, reason: "no_voice_route" };
     const started = await startListening(route);
     if (!started.ok) return started;
@@ -86,18 +87,19 @@ export default function QuestionScreen(props: Props) {
     setVoiceState("working");
     const u = await understand(question, heard.data.transcript);
     setVoiceState("idle");
-    onVoice(u, heard.data.transcript);
+    const audio = heard.data.audio;
+    onVoice(u, heard.data.transcript, audio);
 
     const action = voiceAction(question, u);
     if (u.kind !== "answer" || action === "taps") {
       setVoiceNote(PLEASE_TAP);
     } else if (action === "apply_now") {
       // A danger answer: saved at once, not read back, so nothing can undo it.
-      onApplyNow(u.value, { transcript: heard.data.transcript, confidence: u.confidence, confirmed: false });
+      onApplyNow(u.value, { transcript: heard.data.transcript, confidence: u.confidence, confirmed: false }, audio);
     } else if (action === "read_back") {
       const text = readbackText(question, u.value);
       onChange(u.value);
-      setReadback({ value: u.value, transcript: heard.data.transcript, confidence: u.confidence, text });
+      setReadback({ value: u.value, transcript: heard.data.transcript, confidence: u.confidence, text, audio });
       void say(text);
     } else {
       onChange(u.value); // a pre-selection only: the customer still taps "Aage"
@@ -118,7 +120,7 @@ export default function QuestionScreen(props: Props) {
     if (!readback) return;
     const r = readback;
     setReadback(null);
-    onApplyNow(r.value, { transcript: r.transcript, confidence: r.confidence, confirmed: true });
+    onApplyNow(r.value, { transcript: r.transcript, confidence: r.confidence, confirmed: true }, r.audio);
   }
 
   function confirmNo() {

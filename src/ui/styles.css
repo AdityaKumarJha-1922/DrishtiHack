@@ -86,3 +86,9 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .sk-report { display: grid; gap: 8px; background: #334155; padding: 8px; border-radius: 6px; margin-top: 8px; }
 .sk-report p { margin: 0; }
 .sk-report button { min-height: 44px; border-radius: 8px; border: 1px solid #94a3b8; color: #f9fafb; background: transparent; text-align: left; padding: 8px 12px; }
+
+/* Step 5: saving */
+.sk-saved { background: #14532d; padding: 8px; border-radius: 6px; }
+.sk-error-box { background: #7f1d1d; padding: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sk-error-box p { margin: 0; font-weight: 600; }
+.sk-error-box button { min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #fca5a5; background: #991b1b; color: #fff; }

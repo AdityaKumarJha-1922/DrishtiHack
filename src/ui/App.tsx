@@ -3,7 +3,7 @@
 // React note for Python readers: a component is a function that returns what
 // to draw. `useState` keeps a value between redraws, like an attribute on an
 // object; calling its setter redraws the screen with the new value.
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   applyAnswer, createCase, isStopped, nextQuestion, progress, reportDangerLater, reportableDangerSigns,
   undoLast, voiceAction, RULES,
@@ -11,6 +11,7 @@ import {
 } from "../brain";
 import QuestionScreen from "./QuestionScreen";
 import { speak } from "../services/tts";
+import { saveCase } from "../services/save";
 
 const SHOP_ID = "shop-01"; // set per shop later
 
@@ -27,21 +28,56 @@ export default function App() {
   const [showJson, setShowJson] = useState(false);
   // What voice understanding last produced, shown to the shopkeeper. Its
   // transcript and confidence are saved only if the customer keeps that answer.
-  const [voice, setVoice] = useState<{ u: Understanding; transcript: string | null } | null>(null);
+  const [voice, setVoice] = useState<{ u: Understanding; transcript: string | null; audio?: Blob } | null>(null);
   // True while the customer is being asked to confirm a read-back.
   const [readbackActive, setReadbackActive] = useState(false);
   // Shopkeeper's "Report danger sign" picker.
   const [showReport, setShowReport] = useState(false);
+  // Recordings behind voice answers, by answer index. Kept in memory only until
+  // the case is saved; uploaded only with consent. useRef: no redraw needed.
+  const audio = useRef(new Map<number, Blob>());
+  // Saving (Step 5). `savedJson` is the record exactly as the server last confirmed it.
+  const [savedJson, setSavedJson] = useState<string | null>(null);
+  const [save, setSave] = useState<{ state: "idle" | "saving" | "saved" | "failed"; reason?: string }>({ state: "idle" });
+  const lastAttempt = useRef<string | null>(null);
 
   const question = nextQuestion(record);
   const stopped = isStopped(record);
   const { answered, atMost } = progress(record);
+  const finished = stopped || !question;
+  const recordJson = JSON.stringify(record);
+  const isSaved = savedJson === recordJson;
+
+  async function doSave() {
+    const attempt = recordJson;
+    lastAttempt.current = attempt;
+    setSave({ state: "saving" });
+    const result = await saveCase(record, audio.current);
+    if (result.ok) {
+      setRecord(result.record);
+      setSavedJson(JSON.stringify(result.record));
+      setSave({ state: "saved" });
+    } else {
+      if (result.caseSaved) setRecord(result.record); // keeps any audio paths already uploaded
+      setSave({ state: "failed", reason: result.reason });
+    }
+  }
+
+  // useEffect runs after a redraw when `recordJson` changed (like a callback on
+  // "record changed"). It saves automatically once the interview has ended,
+  // trying each version of the record once; "Save again" retries by hand.
+  useEffect(() => {
+    if (finished && !isSaved && save.state !== "saving" && lastAttempt.current !== recordJson) void doSave();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recordJson]);
 
   // Every answer goes through the brain; a rejected answer changes nothing.
-  function commit(value: AnswerValue, meta: AnswerMeta) {
+  function commit(value: AnswerValue, meta: AnswerMeta, recording?: Blob) {
     if (!question) return;
+    const index = record.answers.length; // where this answer will sit
     const result = applyAnswer(record, question.id, value, meta);
     if (result.ok) {
+      if (recording) audio.current.set(index, recording);
       setRecord(result.record);
       setPending(null);
       setError(null);
@@ -62,12 +98,13 @@ export default function App() {
     const meta: AnswerMeta = keptVoice && u?.kind === "answer"
       ? { transcript: voice!.transcript, confidence: u.confidence, confirmed: true }
       : {}; // a tap answer
-    commit(pending, meta);
+    commit(pending, meta, keptVoice ? voice!.audio : undefined);
   }
 
   function redo() {
     const result = undoLast(record);
     if (result.ok) {
+      for (const i of [...audio.current.keys()]) if (i >= result.record.answers.length) audio.current.delete(i);
       setRecord(result.record);
       setPending(null);
       setError(null);
@@ -94,12 +131,24 @@ export default function App() {
     }
   }
 
+  // An unsaved Red case can't be dropped while a save is still possible: the
+  // button stays disabled while saving, and only a FAILED save allows it, after
+  // a strong warning (there is no offline queue yet).
+  const newCaseBlocked = stopped && !isSaved && save.state !== "failed";
+
   function startOver() {
-    // Until saving exists (Step 5), a new case discards this one. Warn hard for Red.
-    const warning = stopped
-      ? "This is an URGENT (Red) case and it is NOT saved yet. Make sure the customer has been told to see an eye doctor today. Start a new case anyway?"
-      : "Start a new case? The current one is not saved yet.";
-    if (window.confirm(warning)) {
+    if (newCaseBlocked) return;
+    let warning: string | null = null;
+    if (stopped && !isSaved) {
+      warning = `This URGENT (Red) case could NOT be saved (${save.reason}). Make sure the customer has been told to see an eye doctor today, and note the case on paper. Discard it and start a new case?`;
+    } else if (!isSaved && record.answers.length > 0) {
+      warning = finished ? `This case is NOT saved (${save.reason ?? "not tried"}). Discard it?` : "Start a new case? This interview is not finished or saved.";
+    }
+    if (warning === null || window.confirm(warning)) {
+      audio.current = new Map();
+      setSavedJson(null);
+      setSave({ state: "idle" });
+      lastAttempt.current = null;
       setRecord(newCase());
       setPending(null);
       setError(null);
@@ -134,7 +183,7 @@ export default function App() {
               onChange={(v) => { setPending(v); setError(null); }}
               onSubmit={submit}
               voiceAllowed={record.consent.given === true}
-              onVoice={(u, transcript) => setVoice({ u, transcript })}
+              onVoice={(u, transcript, recording) => setVoice({ u, transcript, audio: recording })}
               onApplyNow={commit}
               onReadbackChange={setReadbackActive}
             />
@@ -165,6 +214,7 @@ export default function App() {
             Interview complete. Tests come next (M2). Nothing here is final until the remote optometrist reviews the case.
           </p>
         )}
+        {finished && <SaveStatus state={save.state} reason={save.reason} saved={isSaved} onRetry={doSave} />}
         {error && <p className="sk-error">Not accepted: {error}</p>}
         {voice && <VoicePanel u={voice.u} transcript={voice.transcript} />}
         {readbackActive && <p className="sk-note">Read-back: waiting for the customer to say or tap Haan / Nahin.</p>}
@@ -190,10 +240,23 @@ export default function App() {
         )}
         <div className="sk-buttons">
           <button className="ghost" onClick={() => setShowJson(!showJson)}>{showJson ? "Hide" : "Show"} case record</button>
-          <button className="ghost" onClick={startOver}>New case</button>
+          <button className="ghost" onClick={startOver} disabled={newCaseBlocked}
+            title={newCaseBlocked ? "A Red case must be saved first" : undefined}>New case</button>
         </div>
         {showJson && <pre className="json">{JSON.stringify(record, null, 2)}</pre>}
       </section>
+    </div>
+  );
+}
+
+// The shopkeeper always sees whether the server confirmed the save.
+function SaveStatus(p: { state: string; reason?: string; saved: boolean; onRetry: () => void }) {
+  if (p.state === "saving") return <p className="sk-note">Saving the case…</p>;
+  if (p.saved) return <p className="sk-saved">Saved to the server. Waiting for the optometrist's review.</p>;
+  return (
+    <div className="sk-error-box">
+      <p>NOT saved{p.reason ? ` (${p.reason})` : ""}.</p>
+      <button onClick={p.onRetry}>Save again</button>
     </div>
   );
 }

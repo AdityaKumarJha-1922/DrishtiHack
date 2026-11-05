@@ -72,6 +72,21 @@ voice is off for that question. The shopkeeper's Next is disabled during a read-
 - Customer message: `messages.red_customer_hi`, shown with a repeat button. Until
   `message_approval.red_customer_hi` is true, the shopkeeper sees a draft notice.
 
+## Saving (Step 5)
+
+- Table `public.cases`: `case_id` (key), `shop_id`, `created_at`, `saved_at`,
+  `record` (the canonical record), `urgent` (generated from `record.danger_signs`).
+  The record's own `case_id`/`shop_id` must match the columns.
+- RLS on, no policies: only the service role (inside Edge Functions) reads or writes.
+  The optometrist portal's access is a later decision.
+- `save_case` checks the exact shape (`_shared/case_shape.ts`, kept in step with
+  `types.ts` by `tests/case_shape.test.ts`) and refuses `danger_sign_removed`,
+  `review_set_by_shop`, `already_reviewed`, `shop_mismatch`. A trigger also refuses any
+  update that removes a danger sign.
+- Audio: only after the case is saved with `consent.given === true`, to the private
+  `case-audio` bucket at `<case_id>/<answer_index>-<q>.webm`; that path goes in the
+  existing `answers[i].audio_url`. No retention period yet (open decision).
+
 ## Triage (v0, from rules.yaml)
 
 - **Red:** any danger sign; diabetes or TB medicine with a recent vision change;
