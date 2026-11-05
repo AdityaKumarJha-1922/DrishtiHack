@@ -1,11 +1,12 @@
 // One question per screen, with large tap answers, a repeat button, and
-// (after consent) a microphone button. The options come straight from
-// data/questions.yaml. What happens to a voice answer is decided by the
-// brain (voiceAction), never here.
+// (after consent) a microphone button. The words come from the data files in
+// the customer's chosen script (Devanagari or Roman Hindi); spoken text always
+// uses SPEAK_SCRIPT. What happens to a voice answer is decided by the brain
+// (voiceAction), never here.
 import { useRef, useState } from "react";
 import {
-  parseYesNo, readbackText, voiceAction, RULES,
-  type AnswerMeta, type AnswerValue, type Question, type Understanding,
+  optionLabel, parseYesNo, questionText, readbackText, t, voiceAction, RULES, SPEAK_SCRIPT,
+  type AnswerMeta, type AnswerValue, type Question, type Script, type Understanding,
 } from "../brain";
 import type { CallResult } from "../services/net";
 import { startListening, voiceRoute, type Listening } from "../services/stt";
@@ -23,17 +24,17 @@ interface Props {
   // Saves an answer straight away (a confirmed read-back, or a danger answer).
   onApplyNow: (value: AnswerValue, meta: AnswerMeta, audio?: Blob) => void;
   onReadbackChange: (active: boolean) => void;
+  script: Script;
 }
 
 type VoiceState = "idle" | "listening" | "working";
-interface Readback { value: AnswerValue; transcript: string; confidence: number; text: string; audio?: Blob }
-
-const PLEASE_TAP = "Samajh nahin aaya. Kripya neeche se chuniye.";
+interface Readback { value: AnswerValue; transcript: string; confidence: number; audio?: Blob }
 
 export default function QuestionScreen(props: Props) {
-  const { question, value, onChange, onSubmit, voiceAllowed, onVoice, onApplyNow, onReadbackChange } = props;
+  const { question, value, onChange, onSubmit, voiceAllowed, onVoice, onApplyNow, onReadbackChange, script } = props;
   const [flash, setFlash] = useState(false);
   const [voiceState, setVoiceState] = useState<VoiceState>("idle");
+  // A key into customer_text.yaml, so the note follows a script switch.
   const [voiceNote, setVoiceNote] = useState<string | null>(null);
   const [readback, setReadbackState] = useState<Readback | null>(null);
   const [rejections, setRejections] = useState(0);
@@ -48,9 +49,10 @@ export default function QuestionScreen(props: Props) {
     onReadbackChange(r !== null);
   }
 
-  // Speak a text: Sarvam voice, then the phone's Hindi voice, else highlight it.
-  async function say(text: string) {
-    if (!(await speak(text))) {
+  // Speak (always in SPEAK_SCRIPT): Sarvam voice, then the phone's Hindi voice,
+  // else highlight the text on screen so the shopkeeper can read it out.
+  async function say(spoken: string) {
+    if (!(await speak(spoken))) {
       setFlash(true);
       window.setTimeout(() => setFlash(false), 1200);
     }
@@ -80,7 +82,7 @@ export default function QuestionScreen(props: Props) {
 
     const heard = await listenOnce();
     if (!heard.ok) {
-      setVoiceNote(PLEASE_TAP);
+      setVoiceNote("please_tap");
       onVoice({ kind: "rejected", reason: heard.reason, dangerWordsHeard: [] }, null);
       return;
     }
@@ -92,18 +94,17 @@ export default function QuestionScreen(props: Props) {
 
     const action = voiceAction(question, u);
     if (u.kind !== "answer" || action === "taps") {
-      setVoiceNote(PLEASE_TAP);
+      setVoiceNote("please_tap");
     } else if (action === "apply_now") {
       // A danger answer: saved at once, not read back, so nothing can undo it.
       onApplyNow(u.value, { transcript: heard.data.transcript, confidence: u.confidence, confirmed: false }, audio);
     } else if (action === "read_back") {
-      const text = readbackText(question, u.value);
       onChange(u.value);
-      setReadback({ value: u.value, transcript: heard.data.transcript, confidence: u.confidence, text, audio });
-      void say(text);
+      setReadback({ value: u.value, transcript: heard.data.transcript, confidence: u.confidence, audio });
+      void say(readbackText(question, u.value, SPEAK_SCRIPT));
     } else {
       onChange(u.value); // a pre-selection only: the customer still taps "Aage"
-      setVoiceNote("Kya yeh sahi hai? Sahi ho to Aage dabaiye.");
+      setVoiceNote("confirm_preselect");
     }
   }
 
@@ -113,7 +114,7 @@ export default function QuestionScreen(props: Props) {
     const answer = heard.ok ? parseYesNo(heard.data.transcript) : null;
     if (answer === "yes") confirmYes();
     else if (answer === "no") confirmNo();
-    else setVoiceNote("Samajh nahin aaya. Kripya Haan ya Nahin dabaiye.");
+    else setVoiceNote("readback_unclear");
   }
 
   function confirmYes() {
@@ -128,9 +129,7 @@ export default function QuestionScreen(props: Props) {
     onChange(null);
     const n = rejections + 1;
     setRejections(n);
-    setVoiceNote(n >= RULES.speech.max_readback_rejections
-      ? "Kripya neeche se chuniye."
-      : "Theek hai. Dobara boliye, ya neeche se chuniye.");
+    setVoiceNote(n >= RULES.speech.max_readback_rejections ? "please_tap_short" : "readback_no_retry");
   }
 
   const micButton = route && (
@@ -138,26 +137,27 @@ export default function QuestionScreen(props: Props) {
       className={`mic ${voiceState}`}
       onClick={micPressed}
       disabled={voiceState === "working"}
-      aria-label={voiceState === "listening" ? "Bolna band kijiye" : "Bolkar jawab dijiye"}
+      aria-label={t(voiceState === "listening" ? "stop_label" : "speak_label", script)}
     >
-      {voiceState === "listening" ? "⏹ Bas" : voiceState === "working" ? "…" : "🎤 Boliye"}
+      {voiceState === "listening" ? t("stop", script) : voiceState === "working" ? "…" : t("speak", script)}
     </button>
   );
 
   if (readback) {
     return (
       <div className="question">
-        <p className="asked">{question.text_hi}</p>
-        <h1 className={flash ? "flash" : ""}>{readback.text}</h1>
+        <p className="asked">{questionText(question, script)}</p>
+        <h1 className={flash ? "flash" : ""}>{readbackText(question, readback.value, script)}</h1>
         <div className="row">
-          <button className="repeat" onClick={() => say(readback.text)} aria-label="Dobara suniye">🔁 Dobara suniye</button>
+          <button className="repeat" onClick={() => say(readbackText(question, readback.value, SPEAK_SCRIPT))}
+            aria-label={t("repeat_label", script)}>{t("repeat", script)}</button>
           {micButton}
         </div>
-        {voiceState === "listening" && <p className="voice-note">Haan ya Nahin boliye… phir "Bas" dabaiye.</p>}
-        {voiceNote && voiceState === "idle" && <p className="voice-note">{voiceNote}</p>}
+        {voiceState === "listening" && <p className="voice-note">{t("listening_yes_no", script)}</p>}
+        {voiceNote && voiceState === "idle" && <p className="voice-note">{t(voiceNote, script)}</p>}
         <div className="options two">
-          <button className="choice confirm-yes" onClick={confirmYes}>Haan</button>
-          <button className="choice confirm-no" onClick={confirmNo}>Nahin</button>
+          <button className="choice confirm-yes" onClick={confirmYes}>{t("yes", script)}</button>
+          <button className="choice confirm-no" onClick={confirmNo}>{t("no", script)}</button>
         </div>
       </div>
     );
@@ -165,27 +165,28 @@ export default function QuestionScreen(props: Props) {
 
   return (
     <div className="question">
-      <h1 className={flash ? "flash" : ""}>{question.text_hi}</h1>
+      <h1 className={flash ? "flash" : ""}>{questionText(question, script)}</h1>
       <div className="row">
-        <button className="repeat" onClick={() => say(question.text_hi)} aria-label="Sawal dobara suniye">🔁 Dobara suniye</button>
+        <button className="repeat" onClick={() => say(questionText(question, SPEAK_SCRIPT))}
+          aria-label={t("repeat_label", script)}>{t("repeat", script)}</button>
         {micButton}
       </div>
-      {voiceState === "listening" && <p className="voice-note">Boliye… ho jaaye to "Bas" dabaiye.</p>}
-      {voiceNote && voiceState === "idle" && <p className="voice-note">{voiceNote}</p>}
+      {voiceState === "listening" && <p className="voice-note">{t("listening", script)}</p>}
+      {voiceNote && voiceState === "idle" && <p className="voice-note">{t(voiceNote, script)}</p>}
 
-      <Answers question={question} value={value} onChange={onChange} />
+      <Answers question={question} value={value} onChange={onChange} script={script} />
 
-      <button className="go" onClick={onSubmit} disabled={value === null}>Aage →</button>
+      <button className="go" onClick={onSubmit} disabled={value === null}>{t("next", script)}</button>
     </div>
   );
 }
 
-function Answers({ question, value, onChange }: Pick<Props, "question" | "value" | "onChange">) {
+function Answers({ question, value, onChange, script }: Pick<Props, "question" | "value" | "onChange" | "script">) {
   if (question.type === "yes_no") {
     return (
       <div className="options two">
-        <Choice label="Haan" selected={value === "yes"} onClick={() => onChange("yes")} />
-        <Choice label="Nahin" selected={value === "no"} onClick={() => onChange("no")} />
+        <Choice label={t("yes", script)} selected={value === "yes"} onClick={() => onChange("yes")} />
+        <Choice label={t("no", script)} selected={value === "no"} onClick={() => onChange("no")} />
       </div>
     );
   }
@@ -194,7 +195,7 @@ function Answers({ question, value, onChange }: Pick<Props, "question" | "value"
     return (
       <div className="options">
         {(question.options ?? []).map((o) => (
-          <Choice key={String(o.value)} label={o.label_hi} selected={value === o.value} onClick={() => onChange(o.value)} />
+          <Choice key={String(o.value)} label={optionLabel(o, script)} selected={value === o.value} onClick={() => onChange(o.value)} />
         ))}
       </div>
     );
@@ -212,9 +213,9 @@ function Answers({ question, value, onChange }: Pick<Props, "question" | "value"
     }
     return (
       <div className="options">
-        <p className="hint">Ek ya zyada chuniye</p>
+        <p className="hint">{t("choose_many", script)}</p>
         {(question.options ?? []).map((o) => (
-          <Choice key={String(o.value)} label={o.label_hi} selected={chosen.includes(String(o.value))} onClick={() => toggle(String(o.value))} />
+          <Choice key={String(o.value)} label={optionLabel(o, script)} selected={chosen.includes(String(o.value))} onClick={() => toggle(String(o.value))} />
         ))}
       </div>
     );
@@ -232,7 +233,7 @@ function Answers({ question, value, onChange }: Pick<Props, "question" | "value"
       {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
         <button key={d} onClick={() => press(d)}>{d}</button>
       ))}
-      <button onClick={() => onChange(null)} aria-label="Mitaiye">⌫</button>
+      <button onClick={() => onChange(null)} aria-label={t("erase_label", script)}>⌫</button>
       <button onClick={() => press("0")}>0</button>
       <span />
     </div>

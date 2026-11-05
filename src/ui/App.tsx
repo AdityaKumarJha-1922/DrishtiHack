@@ -6,10 +6,11 @@
 import { useEffect, useRef, useState } from "react";
 import {
   applyAnswer, createCase, decide, isStopped, nextQuestion, nextTest, progress, reportDangerLater, reportableDangerSigns,
-  undoLast, voiceAction, RULES,
-  type AnswerMeta, type AnswerValue, type CaseRecord, type Understanding,
+  isApproved, t, undoLast, voiceAction, RULES, SPEAK_SCRIPT,
+  type AnswerMeta, type AnswerValue, type CaseRecord, type Script, type Understanding,
 } from "../brain";
 import QuestionScreen from "./QuestionScreen";
+import { loadScript, saveScript } from "./script";
 import { speak } from "../services/tts";
 import { saveCase } from "../services/save";
 import TestFlow from "./tests/TestFlow";
@@ -40,8 +41,16 @@ export default function App() {
   const audio = useRef(new Map<number, Blob>());
   // Saving (Step 5). `savedJson` is the record exactly as the server last confirmed it.
   const [savedJson, setSavedJson] = useState<string | null>(null);
-  const [save, setSave] = useState<{ state: "idle" | "saving" | "saved" | "failed"; reason?: string }>({ state: "idle" });
+  // "partial": the case record is on the server, but a voice recording is not.
+  const [save, setSave] = useState<{ state: "idle" | "saving" | "saved" | "partial" | "failed"; reason?: string }>({ state: "idle" });
   const lastAttempt = useRef<string | null>(null);
+  // Devanagari or Roman Hindi for everything the customer reads.
+  const [script, setScript] = useState<Script>(loadScript);
+  const otherScript: Script = script === "deva" ? "latn" : "deva";
+  function switchScript() {
+    setScript(otherScript);
+    saveScript(otherScript);
+  }
 
   const question = nextQuestion(record);
   const stopped = isStopped(record);
@@ -50,6 +59,9 @@ export default function App() {
   // they are done (the record then carries decide()'s result) or it is Red.
   const testStep = !stopped && !question ? nextTest(record) : null;
   const finished = stopped || (!question && testStep === null);
+  // Save points: a Red case, the end of the interview (before any test, so the
+  // answers are kept if the customer leaves), and the end of the tests.
+  const atSavePoint = finished || testStep === "distance_right";
   const recordJson = JSON.stringify(record);
   const isSaved = savedJson === recordJson;
 
@@ -64,15 +76,15 @@ export default function App() {
       setSave({ state: "saved" });
     } else {
       if (result.caseSaved) setRecord(result.record); // keeps any audio paths already uploaded
-      setSave({ state: "failed", reason: result.reason });
+      setSave({ state: result.caseSaved ? "partial" : "failed", reason: result.reason });
     }
   }
 
   // useEffect runs after a redraw when `recordJson` changed (like a callback on
-  // "record changed"). It saves automatically once the interview has ended,
-  // trying each version of the record once; "Save again" retries by hand.
+  // "record changed"). It saves automatically at each save point, trying each
+  // version of the record once; "Save again" retries by hand.
   useEffect(() => {
-    if (finished && !isSaved && save.state !== "saving" && lastAttempt.current !== recordJson) void doSave();
+    if (atSavePoint && !isSaved && save.state !== "saving" && lastAttempt.current !== recordJson) void doSave();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordJson]);
 
@@ -140,17 +152,26 @@ export default function App() {
   }
 
   // An unsaved Red case can't be dropped while a save is still possible: the
-  // button stays disabled while saving, and only a FAILED save allows it, after
-  // a strong warning (there is no offline queue yet).
-  const newCaseBlocked = stopped && !isSaved && save.state !== "failed";
+  // button stays disabled while saving, and only a failed save (or one where the
+  // record is on the server but a recording is not) allows it, after a warning.
+  // There is no offline queue yet.
+  const newCaseBlocked = stopped && !isSaved && save.state !== "failed" && save.state !== "partial";
 
   function startOver() {
     if (newCaseBlocked) return;
     let warning: string | null = null;
-    if (stopped && !isSaved) {
+    if (stopped && !isSaved && save.state === "partial") {
+      warning = `This URGENT (Red) case is saved, but a voice recording is not (${save.reason}). Start a new case? The recording will be lost.`;
+    } else if (stopped && !isSaved) {
       warning = `This URGENT (Red) case could NOT be saved (${save.reason}). Make sure the customer has been told to see an eye doctor today, and note the case on paper. Discard it and start a new case?`;
+    } else if (!isSaved && save.state === "partial") {
+      warning = `This case is saved, but a voice recording is not (${save.reason}). Start a new case? The recording will be lost.`;
     } else if (!isSaved && record.answers.length > 0) {
-      warning = finished ? `This case is NOT saved (${save.reason ?? "not tried"}). Discard it?` : "Start a new case? This interview is not finished or saved.";
+      warning = finished
+        ? `This case is NOT saved (${save.reason ?? "not tried"}). Discard it?`
+        : savedJson !== null
+          ? "The interview is saved, but the test results so far are not. Start a new case?"
+          : "Start a new case? This interview is not finished or saved.";
     }
     if (warning === null || window.confirm(warning)) {
       audio.current = new Map();
@@ -168,19 +189,26 @@ export default function App() {
 
   return (
     <div className="app">
-      <main className={`customer ${stopped ? "is-red" : ""}`} aria-live="polite">
+      <main className={`customer ${stopped ? "is-red" : ""}`} aria-live="polite"
+        data-script={script} lang={script === "deva" ? "hi" : "hi-Latn"}>
+        <div className="script-row">
+          <button className="script-switch" onClick={switchScript} lang={otherScript === "deva" ? "hi" : "hi-Latn"}>
+            {otherScript === "deva" ? "अ" : "A"} {t("script_name", otherScript)}
+          </button>
+        </div>
         {stopped ? (
           <div className="end-screen red">
-            <p className="big">{RULES.messages.red_customer_hi}</p>
-            <button className="repeat" onClick={() => speak(RULES.messages.red_customer_hi)} aria-label="Dobara suniye">
-              🔁 Dobara suniye
+            <p className="big">{t("red_customer", script)}</p>
+            <button className="repeat" onClick={() => speak(t("red_customer", SPEAK_SCRIPT))} aria-label={t("repeat_label", script)}>
+              {t("repeat", script)}
             </button>
           </div>
         ) : question ? (
           <>
-            <div className="progress" aria-label={`Sawal ${answered + 1}, zyada se zyada ${atMost}`}>
-              <span>Sawal {answered + 1}</span>
-              <span className="muted">zyada se zyada {atMost}</span>
+            <div className="progress"
+              aria-label={`${t("progress_question", script, { n: answered + 1 })}, ${t("progress_at_most", script, { n: atMost })}`}>
+              <span>{t("progress_question", script, { n: answered + 1 })}</span>
+              <span className="muted">{t("progress_at_most", script, { n: atMost })}</span>
               <div className="bar"><div style={{ width: `${(answered / atMost) * 100}%` }} /></div>
             </div>
             {/* `key` makes React start a fresh screen for each question. */}
@@ -194,15 +222,17 @@ export default function App() {
               onVoice={(u, transcript, recording) => setVoice({ u, transcript, audio: recording })}
               onApplyNow={commit}
               onReadbackChange={setReadbackActive}
+              script={script}
             />
-            {error && <p className="retry" role="alert">Kripya dobara chuniye.</p>}
+            {error && <p className="retry" role="alert">{t("please_choose_again", script)}</p>}
           </>
         ) : testStep ? (
-          <TestFlow record={record} voiceAllowed={record.consent.given === true} onRecord={setRecord} onError={setError} />
+          <TestFlow record={record} voiceAllowed={record.consent.given === true} onRecord={setRecord} onError={setError} script={script} />
         ) : (
           <div className="end-screen">
-            <p className="big">{customerResultText(record).text}</p>
-            <button className="repeat" onClick={() => speak(customerResultText(record).text)} aria-label="Dobara suniye">🔁 Dobara suniye</button>
+            <p className="big">{customerResultText(record, script).text}</p>
+            <button className="repeat" onClick={() => speak(customerResultText(record, SPEAK_SCRIPT).text)}
+              aria-label={t("repeat_label", script)}>{t("repeat", script)}</button>
           </div>
         )}
       </main>
@@ -219,13 +249,13 @@ export default function App() {
             <p>Danger signs: {record.danger_signs.map(label).join("; ")}</p>
           </div>
         )}
-        {stopped && !RULES.message_approval.red_customer_hi && <p className="sk-note">{RULES.messages.draft_message_en}</p>}
+        {stopped && !isApproved("red_customer") && <p className="sk-note">{RULES.messages.draft_message_en}</p>}
         {!stopped && !question && testStep && <p className="sk-note">Interview complete. Phone tests: {testStep.replace(/_/g, " ")}.</p>}
         {finished && !stopped && <ShopkeeperResult record={record} />}
-        {finished && <SaveStatus state={save.state} reason={save.reason} saved={isSaved} onRetry={doSave} />}
+        {(stopped || !question) && <SaveStatus state={save.state} reason={save.reason} saved={isSaved} finished={finished} onRetry={doSave} />}
         {error && <p className="sk-error">Not accepted: {error}</p>}
         {voice && <VoicePanel u={voice.u} transcript={voice.transcript} />}
-        {readbackActive && <p className="sk-note">Read-back: waiting for the customer to say or tap Haan / Nahin.</p>}
+        {readbackActive && <p className="sk-note">Read-back: waiting for the customer to say or tap yes / no.</p>}
 
         <div className="sk-buttons">
           <button onClick={submit} disabled={!question || pending === null || readbackActive}>Next</button>
@@ -258,15 +288,27 @@ export default function App() {
 }
 
 // The shopkeeper always sees whether the server confirmed the save.
-function SaveStatus(p: { state: string; reason?: string; saved: boolean; onRetry: () => void }) {
+function SaveStatus(p: { state: string; reason?: string; saved: boolean; finished: boolean; onRetry: () => void }) {
   if (p.state === "saving") return <p className="sk-note">Saving the case…</p>;
-  if (p.saved) return <p className="sk-saved">Saved to the server. Waiting for the optometrist's review.</p>;
-  return (
-    <div className="sk-error-box">
-      <p>NOT saved{p.reason ? ` (${p.reason})` : ""}.</p>
-      <button onClick={p.onRetry}>Save again</button>
-    </div>
-  );
+  if (p.state === "failed") {
+    return (
+      <div className="sk-error-box">
+        <p>NOT saved{p.reason ? ` (${p.reason})` : ""}.</p>
+        <button onClick={p.onRetry}>Save again</button>
+      </div>
+    );
+  }
+  if (p.state === "partial") {
+    return (
+      <div className="sk-error-box partial">
+        <p>Case saved, but a voice recording was not{p.reason ? ` (${p.reason})` : ""}.</p>
+        <button onClick={p.onRetry}>Save again</button>
+      </div>
+    );
+  }
+  if (p.saved && p.finished) return <p className="sk-saved">Saved to the server. Waiting for the optometrist's review.</p>;
+  if (p.state === "saved") return <p className="sk-saved">Interview saved. The test results save when the tests finish.</p>;
+  return <p className="sk-note">Not saved yet.</p>;
 }
 
 // "reported_later:painful_red_eye" -> "painful red eye (reported later)"

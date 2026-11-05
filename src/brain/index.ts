@@ -4,7 +4,7 @@ export { createCase } from "./caseRecord";
 export { nextQuestion, applyAnswer, undoLast, isStopped, progress, validateAnswer } from "./interview";
 export type { ApplyResult, AnswerMeta } from "./interview";
 export { triage, readingAdd, decide } from "./decide";
-export { parseLocalNumber, matchSymptoms } from "./words";
+export { parseLocalNumber, matchSymptoms, normalizeText } from "./words";
 export { QUESTIONS, RULES, getQuestion } from "./data";
 export type { Question, Option } from "./data";
 export { replySchema, questionForModel, parseReply, dangerWordsIn } from "./understanding";
@@ -16,3 +16,5 @@ export {
   distanceCm, steadyReading, pinholeNeeded, pinholeEye, nearTestsNeeded, nextTest, applyTestResult, DIRECTIONS,
 } from "./phoneTests";
 export type { Direction, ChartState, Pick, Point, TestStep } from "./phoneTests";
+export { t, isApproved, questionText, optionLabel, CUSTOMER_TEXT, DEFAULT_SCRIPT, SPEAK_SCRIPT } from "./text";
+export type { Script } from "./text";

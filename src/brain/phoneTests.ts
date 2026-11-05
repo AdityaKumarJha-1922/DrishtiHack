@@ -7,6 +7,7 @@ import { evaluate } from "./conditions";
 import { RULES, type Rules } from "./data";
 import { isStopped, type ApplyResult } from "./interview";
 import type { CaseRecord } from "./types";
+import { normalizeText } from "./words";
 
 export type Direction = "up" | "down" | "left" | "right";
 export const DIRECTIONS: Direction[] = ["up", "down", "left", "right"];
@@ -68,8 +69,8 @@ export function chartResult(s: ChartState, rules: Rules = RULES): string {
 
 /** A spoken direction ("upar", "daayen", "नीचे"...), matched locally. Null when unclear. */
 export function parseDirection(transcript: string, rules: Rules = RULES): Direction | null {
-  const words = transcript.toLowerCase().split(/[\s,.!?।]+/).filter(Boolean);
-  const hits = DIRECTIONS.filter((d) => words.some((w) => rules.phone_tests.direction_words[d].includes(w)));
+  const words = normalizeText(transcript).split(/[\s,.!?।]+/).filter(Boolean);
+  const hits = DIRECTIONS.filter((d) => words.some((w) => rules.phone_tests.direction_words[d].map(normalizeText).includes(w)));
   return hits.length === 1 ? hits[0] : null;
 }
 

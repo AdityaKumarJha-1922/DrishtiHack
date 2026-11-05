@@ -55,41 +55,18 @@ lens_suggestions:
     when: { all: [ { field: person.age, op: ">=", value: 60 }, { field: answer.walking, op: "==", value: yes } ] }
 
 messages:
-  # Customer-facing wording. There is no approved clinical wording yet: see
-  # message_approval below. The app tells the shopkeeper while it is a draft.
-  red_customer_hi: "Kripya aaj hi aankh ke doctor ko dikhaiye."
+  # Shopkeeper wording (English) and reason codes. Customer wording, in both
+  # scripts and with its approval status, is in customer_text.yaml.
   red_shopkeeper_en: "Danger sign reported. Stop here: refer to an eye doctor today. Case marked urgent for the optometrist."
   draft_message_en: "The customer's message above is DRAFT wording, not yet approved by the clinical lead."
-  done_customer_hi: "Dhanyavaad. Ab kuch aasaan jaanch hogi."
   retina_check_reason: yearly_retina_check
-  # M2 phone tests: customer instructions (DRAFT wording, dev team).
-  tests_intro_hi: "Ab kuch aasaan jaanch. Dukaandaar aapki madad karenge."
-  chart_right_eye_hi: "Baayin aankh hatheli se dhakiye. Sirf daayin aankh se dekhiye."
-  chart_left_eye_hi: "Daayin aankh hatheli se dhakiye. Sirf baayin aankh se dekhiye."
-  chart_pinhole_hi: "Card ke chhote chhed se, isi aankh se dekhiye."
-  chart_ask_hi: "E ki tangein kis taraf hain? Upar, neeche, daayen ya baayen?"
-  clock_ask_hi: "Dono aankhon se dekhiye. Kya koi line baaki linon se zyada gehri ya kaali dikhti hai?"
-  near_point_hi: "Phone ko haath bhar door se dheere dheere paas laaiye. Jab akshar dhundhle hone lagein, ruk jaaiye."
-  working_distance_hi: "Phone ko waise pakadiye jaise aap apna kaam pakadte hain."
-  # Result shown to the customer (DRAFT; see message_approval). Never a prescription.
-  result_green_hi: "Aapke liye padhne ka chashma aazma kar dekhenge. Optometrist isse pakka karenge."
-  result_amber_hi: "Aapki aankhon ki poori jaanch zaroori hai. Hum iske liye samay tay karenge."
-  result_pending_hi: "Dhanyavaad. Optometrist aapka case dekh kar batayenge."
-
-# Set a message to true only after the clinical lead approves its exact wording.
-message_approval:
-  red_customer_hi: false
-  result_green_hi: false
-  result_amber_hi: false
-  result_pending_hi: false
 
 speech:
   # TECHNICAL setting, not clinical (provisional, needs review): a voice answer
   # whose model confidence (0 to 1) is below this is always read back or sent
   # to taps (Step 3). Confidence never affects triage or any clinical decision.
   readback_below_confidence: 0.8
-  # Read-back wording (UI copy, draft). {answer} = the option labels the customer chose.
-  readback_template_hi: "Aapne kaha: {answer}. Kya yeh sahi hai?"
+  # The read-back sentence itself is customer_text.yaml -> readback_template.
   # After this many "Nahin" replies to read-backs on one question, voice is
   # switched off for that question and the customer taps.
   max_readback_rejections: 2

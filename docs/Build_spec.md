@@ -53,8 +53,9 @@ See `src/brain/types.ts`. Change log against the shared spec:
 | Other questions, high confidence | Pre-selected; saved when the customer taps "Aage" |
 | Unclear or rejected | Customer taps |
 
-The read-back sentence is `speech.readback_template_hi` filled with the question's
-own option labels (numbers use `unit_hi`), so it cannot change the answer. A spoken
+The read-back sentence is `readback_template` (customer_text.yaml) filled with the
+question's own option labels in the chosen script (numbers use `unit_hi` / `unit_deva`),
+so it cannot change the answer. A spoken
 reply is matched against `yes_words` / `no_words` as whole words; both or neither
 means unclear and the customer taps. After `max_readback_rejections` "Nahin" replies,
 voice is off for that question. The shopkeeper's Next is disabled during a read-back.
@@ -69,8 +70,8 @@ voice is off for that question. The shopkeeper's Next is disabled during a read-
   and `undoLast()` refuse), triage is Red with `danger_sign:<code>` reasons, the
   suggestion is "doctor" with no power or lenses. `isUrgent()` is true.
 - One-way: there is no function that removes a danger sign.
-- Customer message: `messages.red_customer_hi`, shown with a repeat button. Until
-  `message_approval.red_customer_hi` is true, the shopkeeper sees a draft notice.
+- Customer message: `red_customer` in `customer_text.yaml`, shown with a repeat
+  button. Until its status is `approved`, the shopkeeper sees a draft notice.
 
 ## Saving (Step 5)
 
@@ -107,6 +108,20 @@ order, values that are not chart lines, and distances outside 10–100 cm.
   chart; `light_ok` stays null.
 - All numbers above are in `rules.yaml` (`phone_tests`); procedure details are
   proposals awaiting clinical approval.
+
+## Scripts (Devanagari and Roman Hindi)
+
+- Questions and options: `text_hi` / `label_hi` (Roman Hindi) and `text_deva` /
+  `label_deva` (Devanagari) in `questions.yaml`; `unit_hi` / `unit_deva` for numbers.
+- Everything else the customer sees or hears: `customer_text.yaml`, one entry per
+  text with `latn`, `deva` and `status` (draft or approved). Placeholders such as
+  `{answer}` must match in both scripts.
+- The customer picks the script on screen (`default_script` for a new phone). Speech
+  always uses `speak_script` (Devanagari). The read-back follows the chosen script on
+  screen and Devanagari when spoken.
+- The script is a display choice only: it is not stored in the case record.
+- Spoken-word matching normalises Unicode (NFC, no zero-width joiners), so both
+  encodings of a Devanagari letter match.
 
 ## Triage (v0, from rules.yaml)
 

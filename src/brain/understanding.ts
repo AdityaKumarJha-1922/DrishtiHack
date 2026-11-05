@@ -68,9 +68,10 @@ export function questionForModel(q: Question) {
   return {
     id: q.id,
     text_hi: q.text_hi,
+    text_deva: q.text_deva ?? null,
     type: q.type,
     path: q.fills.path,
-    options: (q.options ?? []).map((o) => ({ value: o.value, label_hi: o.label_hi })),
+    options: (q.options ?? []).map((o) => ({ value: o.value, label_hi: o.label_hi, label_deva: o.label_deva ?? null })),
     min: q.min ?? null,
     max: q.max ?? null,
   };

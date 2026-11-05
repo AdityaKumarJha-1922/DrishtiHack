@@ -1,5 +1,13 @@
-// Helpers for spoken answers (used from Step 2 on; tested now).
+// Helpers for spoken answers.
 import { SYMPTOM_WORDS, type SymptomWord } from "./data";
+
+/**
+ * Makes equal words compare equal: Unicode NFC (Devanagari letters such as
+ * ज़ can be stored two ways), no zero-width joiners, lower-case Roman text.
+ */
+export function normalizeText(s: string): string {
+  return s.normalize("NFC").replace(/[\u200B-\u200D\uFEFF]/g, "").toLowerCase();
+}
 
 const NUMBER_WORDS: Record<string, number> = {
   ek: 1, do: 2, teen: 3, char: 4, chaar: 4, paanch: 5, panch: 5,
@@ -36,6 +44,6 @@ export function parseLocalNumber(text: string): { value: number; unit: "hours" |
 
 /** Finds known symptom phrases in a transcript (from data/symptom_words.csv). */
 export function matchSymptoms(text: string, words: SymptomWord[] = SYMPTOM_WORDS): SymptomWord[] {
-  const t = text.toLowerCase();
-  return words.filter((w) => t.includes(w.phrase));
+  const t = normalizeText(text);
+  return words.filter((w) => t.includes(normalizeText(w.phrase)));
 }

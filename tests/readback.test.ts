@@ -36,11 +36,20 @@ describe("voiceAction", () => {
 
 describe("readbackText", () => {
   it("uses the template and the question's own labels", () => {
-    expect(readbackText(q("age"), 52)).toBe("Aapne kaha: 52 saal. Kya yeh sahi hai?");
-    expect(readbackText(q("occupation"), "tailor")).toBe("Aapne kaha: Silai / darzi. Kya yeh sahi hai?");
-    expect(readbackText(q("health"), ["diabetes", "tb_medicine"])).toBe("Aapne kaha: Sugar, TB ki dawai. Kya yeh sahi hai?");
-    expect(readbackText(q("near_work"), 8)).toBe("Aapne kaha: 8 ghante ya zyada. Kya yeh sahi hai?");
-    expect(readbackText(q("recent_change"), "no")).toBe("Aapne kaha: Nahin. Kya yeh sahi hai?");
+    expect(readbackText(q("age"), 52, "latn")).toBe("Aapne kaha: 52 saal. Kya yeh sahi hai?");
+    expect(readbackText(q("occupation"), "tailor", "latn")).toBe("Aapne kaha: Silai / darzi. Kya yeh sahi hai?");
+    expect(readbackText(q("health"), ["diabetes", "tb_medicine"], "latn")).toBe("Aapne kaha: Sugar, TB ki dawai. Kya yeh sahi hai?");
+    expect(readbackText(q("near_work"), 8, "latn")).toBe("Aapne kaha: 8 ghante ya zyada. Kya yeh sahi hai?");
+    expect(readbackText(q("recent_change"), "no", "latn")).toBe("Aapne kaha: Nahin. Kya yeh sahi hai?");
+  });
+});
+
+describe("readbackText in Devanagari", () => {
+  it("uses the Devanagari template, labels and unit", () => {
+    expect(readbackText(q("age"), 52, "deva")).toBe("आपने कहा: 52 साल। क्या यह सही है?");
+    expect(readbackText(q("occupation"), "tailor", "deva")).toBe("आपने कहा: सिलाई / दर्ज़ी। क्या यह सही है?");
+    expect(readbackText(q("near_work"), 8, "deva")).toBe("आपने कहा: 8 घंटे या ज़्यादा। क्या यह सही है?");
+    expect(readbackText(q("recent_change"), "no", "deva")).toBe("आपने कहा: नहीं। क्या यह सही है?");
   });
 });
 

@@ -120,3 +120,16 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .sk-result.red { border-left-color: #ef4444; }
 .sk-result p { margin: 4px 0; }
 .sk-result-head { font-weight: 600; }
+
+/* Script choice: Devanagari or Roman Hindi */
+.script-row { display: flex; justify-content: flex-end; margin: -4px 0 8px; }
+.script-switch {
+  min-height: 44px; padding: 4px 14px; font-size: 17px; border-radius: 999px;
+  border: 2px solid #6b7280; background: #fff; color: #111;
+}
+/* Devanagari needs a Devanagari font and a little more line height for its marks. */
+.customer[data-script="deva"] { font-family: "Noto Sans Devanagari", "Mangal", system-ui, sans-serif; }
+.customer[data-script="deva"] h1, .customer[data-script="deva"] .big, .customer[data-script="deva"] .big-hi { line-height: 1.55; }
+.customer[data-script="deva"] .choice { line-height: 1.45; }
+.sk-error-box.partial { background: #78350f; }
+.sk-error-box.partial button { background: #92400e; border-color: #fcd34d; }

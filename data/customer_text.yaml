@@ -1,0 +1,65 @@
+# Every word the CUSTOMER sees or hears (apart from questions and options,
+# which are in questions.yaml), in two scripts:
+#   latn = Roman Hindi (the spec's wording)
+#   deva = Devanagari
+# Owned by the clinical lead. Everything is a dev-team DRAFT until approved:
+# check BOTH scripts, then change `status: draft` to `status: approved`.
+# The app tells the shopkeeper when a safety or result message is a draft.
+#
+# The customer can switch script on screen; `default_script` is what a phone
+# starts with. Spoken text (Sarvam voice or the phone's own Hindi voice)
+# always uses `speak_script`: Hindi voices read Devanagari correctly and
+# Roman Hindi poorly.
+# Placeholders such as {n} and {answer} must appear in both scripts.
+
+default_script: deva
+speak_script: deva
+
+texts:
+  # The script button shows the name of the OTHER script.
+  script_name:         { status: draft, latn: "Roman", deva: "देवनागरी" }
+
+  # Buttons and short prompts
+  next:                { status: draft, latn: "Aage →", deva: "आगे →" }
+  "yes":               { status: draft, latn: "Haan", deva: "हाँ" }
+  "no":                { status: draft, latn: "Nahin", deva: "नहीं" }
+  repeat:              { status: draft, latn: "🔁 Dobara suniye", deva: "🔁 दोबारा सुनिए" }
+  repeat_label:        { status: draft, latn: "Dobara suniye", deva: "दोबारा सुनिए" }
+  speak:               { status: draft, latn: "🎤 Boliye", deva: "🎤 बोलिए" }
+  speak_label:         { status: draft, latn: "Bolkar jawab dijiye", deva: "बोलकर जवाब दीजिए" }
+  stop:                { status: draft, latn: "⏹ Bas", deva: "⏹ बस" }
+  stop_label:          { status: draft, latn: "Bolna band kijiye", deva: "बोलना बंद कीजिए" }
+  erase_label:         { status: draft, latn: "Mitaiye", deva: "मिटाइए" }
+  choose_many:         { status: draft, latn: "Ek ya zyada chuniye", deva: "एक या ज़्यादा चुनिए" }
+  progress_question:   { status: draft, latn: "Sawal {n}", deva: "सवाल {n}" }
+  progress_at_most:    { status: draft, latn: "zyada se zyada {n}", deva: "ज़्यादा से ज़्यादा {n}" }
+  small_letters_label: { status: draft, latn: "Chhote akshar", deva: "छोटे अक्षर" }
+
+  # Voice and read-back
+  listening:           { status: draft, latn: 'Boliye… ho jaaye to "Bas" dabaiye.', deva: 'बोलिए… हो जाए तो "बस" दबाइए।' }
+  listening_yes_no:    { status: draft, latn: 'Haan ya Nahin boliye… phir "Bas" dabaiye.', deva: 'हाँ या नहीं बोलिए… फिर "बस" दबाइए।' }
+  please_tap:          { status: draft, latn: "Samajh nahin aaya. Kripya neeche se chuniye.", deva: "समझ नहीं आया। कृपया नीचे से चुनिए।" }
+  please_tap_short:    { status: draft, latn: "Kripya neeche se chuniye.", deva: "कृपया नीचे से चुनिए।" }
+  please_choose_again: { status: draft, latn: "Kripya dobara chuniye.", deva: "कृपया दोबारा चुनिए।" }
+  confirm_preselect:   { status: draft, latn: "Kya yeh sahi hai? Sahi ho to Aage dabaiye.", deva: "क्या यह सही है? सही हो तो आगे दबाइए।" }
+  readback_template:   { status: draft, latn: "Aapne kaha: {answer}. Kya yeh sahi hai?", deva: "आपने कहा: {answer}। क्या यह सही है?" }
+  readback_no_retry:   { status: draft, latn: "Theek hai. Dobara boliye, ya neeche se chuniye.", deva: "ठीक है। दोबारा बोलिए, या नीचे से चुनिए।" }
+  readback_unclear:    { status: draft, latn: "Samajh nahin aaya. Kripya Haan ya Nahin dabaiye.", deva: "समझ नहीं आया। कृपया हाँ या नहीं दबाइए।" }
+
+  # Safety message (Red). Needs clinical approval before real use.
+  red_customer:        { status: draft, latn: "Kripya aaj hi aankh ke doctor ko dikhaiye.", deva: "कृपया आज ही आँख के डॉक्टर को दिखाइए।" }
+
+  # Phone tests (M2)
+  tests_intro:         { status: draft, latn: "Ab kuch aasaan jaanch. Dukaandaar aapki madad karenge.", deva: "अब कुछ आसान जाँच। दुकानदार आपकी मदद करेंगे।" }
+  chart_right_eye:     { status: draft, latn: "Baayin aankh hatheli se dhakiye. Sirf daayin aankh se dekhiye.", deva: "बाईं आँख हथेली से ढकिए। सिर्फ़ दाईं आँख से देखिए।" }
+  chart_left_eye:      { status: draft, latn: "Daayin aankh hatheli se dhakiye. Sirf baayin aankh se dekhiye.", deva: "दाईं आँख हथेली से ढकिए। सिर्फ़ बाईं आँख से देखिए।" }
+  chart_pinhole:       { status: draft, latn: "Card ke chhote chhed se, isi aankh se dekhiye.", deva: "कार्ड के छोटे छेद से, इसी आँख से देखिए।" }
+  chart_ask:           { status: draft, latn: "E ki tangein kis taraf hain? Upar, neeche, daayen ya baayen?", deva: "E की टाँगें किस तरफ़ हैं? ऊपर, नीचे, दाएँ या बाएँ?" }
+  clock_ask:           { status: draft, latn: "Dono aankhon se dekhiye. Kya koi line baaki linon se zyada gehri ya kaali dikhti hai?", deva: "दोनों आँखों से देखिए। क्या कोई लाइन बाक़ी लाइनों से ज़्यादा गहरी या काली दिखती है?" }
+  near_point:          { status: draft, latn: "Phone ko haath bhar door se dheere dheere paas laaiye. Jab akshar dhundhle hone lagein, ruk jaaiye.", deva: "फ़ोन को हाथ भर दूर से धीरे-धीरे पास लाइए। जब अक्षर धुंधले होने लगें, रुक जाइए।" }
+  working_distance:    { status: draft, latn: "Phone ko waise pakadiye jaise aap apna kaam pakadte hain.", deva: "फ़ोन को वैसे पकड़िए जैसे आप अपना काम पकड़ते हैं।" }
+
+  # Result (never a prescription; the optometrist confirms)
+  result_green:        { status: draft, latn: "Aapke liye padhne ka chashma aazma kar dekhenge. Optometrist isse pakka karenge.", deva: "आपके लिए पढ़ने का चश्मा आज़मा कर देखेंगे। ऑप्टोमेट्रिस्ट इसे पक्का करेंगे।" }
+  result_amber:        { status: draft, latn: "Aapki aankhon ki poori jaanch zaroori hai. Hum iske liye samay tay karenge.", deva: "आपकी आँखों की पूरी जाँच ज़रूरी है। हम इसके लिए समय तय करेंगे।" }
+  result_pending:      { status: draft, latn: "Dhanyavaad. Optometrist aapka case dekh kar batayenge.", deva: "धन्यवाद। ऑप्टोमेट्रिस्ट आपका केस देखकर बताएँगे।" }

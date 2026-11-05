@@ -1,10 +1,12 @@
 // Read-back (Step 3): when a voice answer must be confirmed, and what to say.
-// The wording is a fixed template from rules.yaml filled with the question's
-// own option labels, so the read-back can never change the answer or its
-// meaning. No LLM is involved, and it works offline.
+// The wording is a fixed template (customer_text.yaml) filled with the
+// question's own option labels, in either script, so the read-back can never
+// change the answer or its meaning. No LLM is involved, and it works offline.
 import { RULES, type Question } from "./data";
+import { optionLabel, t, type Script } from "./text";
 import type { AnswerValue } from "./types";
 import type { Understanding } from "./understanding";
+import { normalizeText } from "./words";
 
 /** True when this value contains a danger answer for this question. */
 export function isDangerValue(q: Question, value: AnswerValue): boolean {
@@ -28,20 +30,24 @@ export function voiceAction(q: Question, u: Understanding): "apply_now" | "read_
   return "preselect";
 }
 
-/** The read-back sentence, e.g. "Aapne kaha: 52 saal. Kya yeh sahi hai?" */
-export function readbackText(q: Question, value: AnswerValue): string {
+/** The read-back sentence, e.g. "Aapne kaha: 52 saal. Kya yeh sahi hai?" or "आपने कहा: 52 साल। क्या यह सही है?" */
+export function readbackText(q: Question, value: AnswerValue, script: Script): string {
   let answer: string;
   if (q.type === "number") {
-    answer = q.unit_hi ? `${value} ${q.unit_hi}` : String(value);
+    const unit = script === "deva" ? q.unit_deva ?? q.unit_hi : q.unit_hi;
+    answer = unit ? `${value} ${unit}` : String(value);
   } else if (q.type === "yes_no") {
-    answer = value === "yes" ? "Haan" : "Nahin";
+    answer = t(value === "yes" ? "yes" : "no", script);
   } else {
     const chosen = Array.isArray(value) ? value : [value];
     answer = chosen
-      .map((v) => q.options?.find((o) => o.value === v)?.label_hi ?? String(v))
+      .map((v) => {
+        const o = q.options?.find((x) => x.value === v);
+        return o ? optionLabel(o, script) : String(v);
+      })
       .join(", ");
   }
-  return RULES.speech.readback_template_hi.replace("{answer}", answer);
+  return t("readback_template", script, { answer });
 }
 
 /**
@@ -49,9 +55,9 @@ export function readbackText(q: Question, value: AnswerValue): string {
  * when it is unclear (no word, or both a yes and a no word, as in "theek nahin").
  */
 export function parseYesNo(transcript: string): "yes" | "no" | null {
-  const words = transcript.toLowerCase().split(/[\s,.!?।]+/).filter(Boolean);
-  const yes = words.some((w) => RULES.speech.yes_words.includes(w));
-  const no = words.some((w) => RULES.speech.no_words.includes(w));
+  const words = normalizeText(transcript).split(/[\s,.!?।]+/).filter(Boolean);
+  const yes = words.some((w) => RULES.speech.yes_words.map(normalizeText).includes(w));
+  const no = words.some((w) => RULES.speech.no_words.map(normalizeText).includes(w));
   if (yes === no) return null;
   return yes ? "yes" : "no";
 }

@@ -23,7 +23,8 @@ npm run build      # type-check + production build
 | `src/brain/` | All decisions: next question, answer checks, danger stop, triage, reading power, lens codes. Runs on the phone, no network. |
 | `src/brain/types.ts` | The one canonical case record. |
 | `src/ui/` | Step 1 screen: customer interview + separate shopkeeper panel. No decisions here. |
-| `data/questions.yaml` | Question bank, options, skip rules, danger answers. |
+| `data/questions.yaml` | Question bank, options (both scripts), skip rules, danger answers. |
+| `data/customer_text.yaml` | Every other word the customer sees or hears, in Roman Hindi and Devanagari, each marked draft or approved. |
 | `data/rules.yaml` | Triage thresholds, reading-power formula settings, lens rules, messages. |
 | `data/symptom_words.csv`, `data/occupations.csv` | Word list and job table (clinical lead edits). |
 | `tests/` | Vitest: golden cases and interview flow. |
@@ -78,6 +79,18 @@ copied from `node_modules` into `public/mediapipe` before dev/build (not committ
 and the face model is bundled in `public/models`, so it works offline. They load
 only when a camera step starts.
 
+Script: the customer can read in Devanagari (the default) or Roman Hindi, using the
+button at the top of the screen; the phone remembers the choice. Spoken text (Sarvam
+or the phone's Hindi voice) always uses Devanagari, which Hindi voices pronounce
+correctly. The model in `understand` sees both scripts. `tests/data.test.ts` checks
+that every question, option and text exists in both scripts, that every text the app
+uses exists, and that skip rules only read earlier answers. 96 passing tests.
+
+Saving now happens at three points: a Red case at once, the end of the interview
+(before the tests, so the answers survive if the customer leaves), and the end of
+the tests. If the record saves but a voice recording doesn't, the shopkeeper sees
+"Case saved, but a voice recording was not" rather than "NOT saved".
+
 Not yet: optometrist portal (queue, case view, approve/edit), real-phone
 latency (Step 6), phone tests (M2), optometrist portal, offline service worker.
 
@@ -98,8 +111,14 @@ Hindi recognition when online).
 - **"One eye clearly worse"** uses 2 lines (dev proposal, in `rules.yaml`).
 - **Stock-reader trial** result has no case field, so Green is computed without it.
 - **`suggestion.explain`** stays null until approved Hindi wording exists.
-- **Script:** question text is romanised Hindi as in the spec; Devanagari is a decision
-  for the clinical lead (it also affects how the phone voice reads it).
+- **All Devanagari is a dev-team draft** (transliterated from the spec's Roman Hindi),
+  like the option labels and messages: every entry in `customer_text.yaml` is
+  `status: draft`, and the questions and options need the same check. The default script
+  is one line (`default_script`) in `customer_text.yaml`.
+- **Four question wordings changed from the spec** (also draft): `near_work` and
+  `phone_reading` asked "how close" / "what do you do" while the answers are hours, so
+  they now ask for hours; "Kab banwaya?" (no answer recorded it) was dropped from
+  `current_glasses`; "BP" (no option or field) was dropped from `health`.
 - **Saarika is legacy.** `stt` defaults to `saarika:v2.5` as specified; Sarvam
   now recommends `saaras:v3`. Switch with the `SARVAM_STT_MODEL` secret.
 - **No server-side model fallback.** The `understand` function never switches
@@ -110,8 +129,8 @@ Hindi recognition when online).
   lists (`rules.yaml`) and which questions are key (`questions.yaml`) need the
   clinical lead's review. Tap answers are not read back: the visible selection
   plus "Aage" is the confirmation.
-- **Red safety message is not approved.** `message_approval.red_customer_hi: false`
-  in `rules.yaml`; the shopkeeper sees a draft notice until it is set to true.
+- **Red safety message is not approved.** `red_customer` in `customer_text.yaml` is
+  `status: draft`; the shopkeeper sees a draft notice until it is approved.
 - **M2 test procedures are proposals.** Letters per line (5), pass mark (3), starting
   line (6/60), the near target size (6/12 at 40 cm), "<6/60" for an unreadable chart,
   and re-testing only the worse eye with the pinhole are in `rules.yaml` as proposals
@@ -122,8 +141,6 @@ Hindi recognition when online).
   and `eye_covered` are the helper's ticks, not camera checks (quality checks are Should).
 - **The camera download is large** (about 13 MB of wasm plus a 3.6 MB model), fetched
   once when a camera step first runs; slow on a weak network.
-- **The case saves when the tests finish** (or at once on Red), not between the
-  interview and the tests.
 - **Anyone with the anon key can call `save_case`.** Shops should sign in (Supabase
   Auth) so a case is tied to a real shop; `shop_id` is a fixed placeholder for now.
 - **No audio retention period** is applied: the spec has none. Needs a decision.

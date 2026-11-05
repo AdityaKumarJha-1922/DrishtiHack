@@ -2,15 +2,16 @@
 # Owned by the clinical lead. The brain reads this file; no question text or
 # skip rule lives in code.
 #
-# Question wording comes from the Build spec (romanised Hindi).
-# Option labels marked "draft" were written by the dev team and need the
-# clinical lead's approval before the pilot.
+# Every question and option is in two scripts: text_hi / label_hi = Roman Hindi
+# (wording from the Build spec), text_deva / label_deva = Devanagari (dev-team
+# drafts). Option labels and all Devanagari need the clinical lead's approval
+# before the pilot. Other customer wording is in customer_text.yaml.
 #
 # Field guide
 #   id        unique id, also used in the case record's answers[].q
-#   text_hi   what the app says and shows to the customer
+#   text_hi   the question in Roman Hindi; text_deva the same in Devanagari
 #   type      yes_no | choice | multi | number
-#   options   tap answers (value = what the brain stores, label_hi = what the customer sees)
+#   options   tap answers (value = what the brain stores; label_hi / label_deva = what the customer sees)
 #   none_value  for multi: the option that means "none of these" (cannot be combined)
 #   min/max   for number questions
 #   fills     where the answer goes in the case record (see src/brain/apply.ts)
@@ -21,7 +22,7 @@
 #             before it is saved (dev proposal for the key list; clinical lead to confirm).
 #             Any voice answer with low confidence or danger words heard is read back too.
 #             A voice answer that is itself a danger sign is never read back: it stops at once.
-#   unit_hi   word said after a number in the read-back (e.g. "52 saal")
+#   unit_hi   word said after a number in the read-back (e.g. "52 saal"); unit_deva in Devanagari
 
 version: 0
 draft_labels: true
@@ -29,143 +30,157 @@ draft_labels: true
 questions:
   - id: consent
     text_hi: "Kya hum aapki awaaz record kar sakte hain? Haan ya na?"
+    text_deva: "क्या हम आपकी आवाज़ रिकॉर्ड कर सकते हैं? हाँ या ना?"
     type: yes_no
     fills: { path: consent.given }
 
   - id: main_problem
     text_hi: "Aankhon mein kya pareshani hai?"
+    text_deva: "आँखों में क्या परेशानी है?"
     type: multi
     readback: true
     none_value: none
     options:
-      - { value: near_blur, label_hi: "Paas ka dhundhla dikhta hai" }
-      - { value: far_blur, label_hi: "Door ka dhundhla dikhta hai" }
-      - { value: eye_strain, label_hi: "Aankh thakti hai ya sir dard" }
-      - { value: watering_burning, label_hi: "Paani aana ya jalan" }
-      - { value: none, label_hi: "Koi pareshani nahin" }
+      - { value: near_blur, label_hi: "Paas ka dhundhla dikhta hai", label_deva: "पास का धुंधला दिखता है" }
+      - { value: far_blur, label_hi: "Door ka dhundhla dikhta hai", label_deva: "दूर का धुंधला दिखता है" }
+      - { value: eye_strain, label_hi: "Aankh thakti hai ya sir dard", label_deva: "आँख थकती है या सिर दर्द" }
+      - { value: watering_burning, label_hi: "Paani aana ya jalan", label_deva: "पानी आना या जलन" }
+      - { value: none, label_hi: "Koi pareshani nahin", label_deva: "कोई परेशानी नहीं" }
     fills: { path: symptoms, mode: add_all }
 
   - id: danger_signs
     text_hi: "Achanak kam dikhna, bijli chamakna, aankh mein dard ya laali?"
+    text_deva: "अचानक कम दिखना, बिजली चमकना, आँख में दर्द या लाली?"
     type: multi
     readback: true
     none_value: none
     options:
-      - { value: sudden_vision_loss, label_hi: "Achanak kam dikhna" }
-      - { value: flashes_or_curtain, label_hi: "Bijli chamakna ya parda sa aana" }
-      - { value: painful_red_eye, label_hi: "Aankh mein dard ya laali" }
-      - { value: halos_with_headache, label_hi: "Roshni ke ghere aur sir dard" }
-      - { value: injury_or_chemical, label_hi: "Chot lagi ya kuch chala gaya (jaise chuna)" }
-      - { value: none, label_hi: "Inmein se kuch nahin" }
+      - { value: sudden_vision_loss, label_hi: "Achanak kam dikhna", label_deva: "अचानक कम दिखना" }
+      - { value: flashes_or_curtain, label_hi: "Bijli chamakna ya parda sa aana", label_deva: "बिजली चमकना या पर्दा सा आना" }
+      - { value: painful_red_eye, label_hi: "Aankh mein dard ya laali", label_deva: "आँख में दर्द या लाली" }
+      - { value: halos_with_headache, label_hi: "Roshni ke ghere aur sir dard", label_deva: "रोशनी के घेरे और सिर दर्द" }
+      - { value: injury_or_chemical, label_hi: "Chot lagi ya kuch chala gaya (jaise chuna)", label_deva: "चोट लगी या कुछ चला गया (जैसे चूना)" }
+      - { value: none, label_hi: "Inmein se kuch nahin", label_deva: "इनमें से कुछ नहीं" }
     # Each chosen danger value is added to danger_signs; any one stops the interview.
     danger: [sudden_vision_loss, flashes_or_curtain, painful_red_eye, halos_with_headache, injury_or_chemical]
     fills: { path: answers_only }
 
   - id: age
     text_hi: "Aapki umar kitni hai?"
+    text_deva: "आपकी उम्र कितनी है?"
     type: number
     readback: true
     unit_hi: saal
+    unit_deva: साल
     min: 5
     max: 110
     fills: { path: person.age }
 
   - id: occupation
     text_hi: "Aap kya kaam karte hain?"
+    text_deva: "आप क्या काम करते हैं?"
     type: choice
     readback: true
     options:
-      - { value: tailor, label_hi: "Silai / darzi" }
-      - { value: shopkeeper, label_hi: "Dukaan" }
-      - { value: driver, label_hi: "Gaadi chalana" }
-      - { value: farmer, label_hi: "Kheti" }
-      - { value: labourer, label_hi: "Mazdoori" }
-      - { value: office_worker, label_hi: "Office / computer" }
-      - { value: goldsmith_or_repair, label_hi: "Sunar / mobile repair" }
-      - { value: homemaker, label_hi: "Ghar ka kaam" }
-      - { value: student, label_hi: "Padhai" }
-      - { value: other, label_hi: "Kuch aur" }
+      - { value: tailor, label_hi: "Silai / darzi", label_deva: "सिलाई / दर्ज़ी" }
+      - { value: shopkeeper, label_hi: "Dukaan", label_deva: "दुकान" }
+      - { value: driver, label_hi: "Gaadi chalana", label_deva: "गाड़ी चलाना" }
+      - { value: farmer, label_hi: "Kheti", label_deva: "खेती" }
+      - { value: labourer, label_hi: "Mazdoori", label_deva: "मज़दूरी" }
+      - { value: office_worker, label_hi: "Office / computer", label_deva: "ऑफ़िस / कंप्यूटर" }
+      - { value: goldsmith_or_repair, label_hi: "Sunar / mobile repair", label_deva: "सुनार / मोबाइल रिपेयर" }
+      - { value: homemaker, label_hi: "Ghar ka kaam", label_deva: "घर का काम" }
+      - { value: student, label_hi: "Padhai", label_deva: "पढ़ाई" }
+      - { value: other, label_hi: "Kuch aur", label_deva: "कुछ और" }
     fills: { path: person.occupation }
 
   # Adapt rule: under 40 with no near complaint skips the reading-glasses block.
   - id: near_work
-    text_hi: "Kaam ki cheez kitni paas rakhte hain? Phone ko waise pakadiye."
+    text_hi: "Din mein kitne ghante paas ka kaam karte hain?"
+    text_deva: "दिन में कितने घंटे पास का काम करते हैं?"
     type: choice
     readback: true
-    note: "Step 1 records hours only. The camera measures working distance in M2."
+    note: "Hours of close work. The working distance itself is measured in the near test (M2). Wording changed from the spec, which asked how close, while the answers are hours."
     options:
-      - { value: 0, label_hi: "Paas ka kaam nahin" }
-      - { value: 2, label_hi: "Lagbhag 2 ghante" }
-      - { value: 4, label_hi: "Lagbhag 4 ghante" }
-      - { value: 6, label_hi: "Lagbhag 6 ghante" }
-      - { value: 8, label_hi: "8 ghante ya zyada" }
+      - { value: 0, label_hi: "Paas ka kaam nahin", label_deva: "पास का काम नहीं" }
+      - { value: 2, label_hi: "Lagbhag 2 ghante", label_deva: "लगभग 2 घंटे" }
+      - { value: 4, label_hi: "Lagbhag 4 ghante", label_deva: "लगभग 4 घंटे" }
+      - { value: 6, label_hi: "Lagbhag 6 ghante", label_deva: "लगभग 6 घंटे" }
+      - { value: 8, label_hi: "8 ghante ya zyada", label_deva: "8 घंटे या ज़्यादा" }
     ask_if: { any: [ { field: person.age, op: ">=", value: 40 }, { field: symptoms, op: includes, value: near_blur } ] }
     fills: { path: tasks.near.hours, mode: add }
 
   - id: phone_reading
-    text_hi: "Phone par kya karte hain: WhatsApp, video, padhna?"
+    text_hi: "Din mein kitni der phone dekhte hain? (WhatsApp, video, padhna)"
+    text_deva: "दिन में कितनी देर फ़ोन देखते हैं? (WhatsApp, वीडियो, पढ़ना)"
     type: choice
     readback: true
     options:
-      - { value: 0, label_hi: "Phone kam chalate hain" }
-      - { value: 1, label_hi: "Lagbhag 1 ghanta" }
-      - { value: 2, label_hi: "Lagbhag 2 ghante" }
-      - { value: 4, label_hi: "4 ghante ya zyada" }
+      - { value: 0, label_hi: "Phone kam chalate hain", label_deva: "फ़ोन कम चलाते हैं" }
+      - { value: 1, label_hi: "Lagbhag 1 ghanta", label_deva: "लगभग 1 घंटा" }
+      - { value: 2, label_hi: "Lagbhag 2 ghante", label_deva: "लगभग 2 घंटे" }
+      - { value: 4, label_hi: "4 ghante ya zyada", label_deva: "4 घंटे या ज़्यादा" }
     ask_if: { any: [ { field: person.age, op: ">=", value: 40 }, { field: symptoms, op: includes, value: near_blur } ] }
     fills: { path: tasks.near.hours, mode: add }
 
   - id: far_vision
     text_hi: "Bus ka number, TV, sadak paar chehre saaf dikhte hain?"
+    text_deva: "बस का नंबर, टीवी, सड़क पार चेहरे साफ़ दिखते हैं?"
     type: yes_no
     # "no" adds far_blur to symptoms (if not already there)
     fills: { path: symptoms, mode: add_if_no, value: far_blur }
 
   - id: driving
     text_hi: "Gaadi chalate hain? Raat ko bhi?"
+    text_deva: "गाड़ी चलाते हैं? रात को भी?"
     type: choice
     options:
-      - { value: no, label_hi: "Nahin chalate" }
-      - { value: day, label_hi: "Sirf din mein" }
-      - { value: night, label_hi: "Raat ko bhi" }
+      - { value: no, label_hi: "Nahin chalate", label_deva: "नहीं चलाते" }
+      - { value: day, label_hi: "Sirf din mein", label_deva: "सिर्फ़ दिन में" }
+      - { value: night, label_hi: "Raat ko bhi", label_deva: "रात को भी" }
     fills: { path: answers_only }
 
   # Adapt rule: a farmer or outdoor worker gets the sun question.
   - id: sun
     text_hi: "Din mein kitni der dhoop mein rehte hain?"
+    text_deva: "दिन में कितनी देर धूप में रहते हैं?"
     type: choice
     options:
-      - { value: 1, label_hi: "1 ghante se kam" }
-      - { value: 3, label_hi: "Lagbhag 3 ghante" }
-      - { value: 6, label_hi: "6 ghante ya zyada" }
+      - { value: 1, label_hi: "1 ghante se kam", label_deva: "1 घंटे से कम" }
+      - { value: 3, label_hi: "Lagbhag 3 ghante", label_deva: "लगभग 3 घंटे" }
+      - { value: 6, label_hi: "6 ghante ya zyada", label_deva: "6 घंटे या ज़्यादा" }
     ask_if: { field: person.occupation, op: in, value: [farmer, labourer, driver] }
     fills: { path: answers_only }
 
   - id: current_glasses
-    text_hi: "Chashma pehante hain? Apna hai ya kisi aur ka? Kab banwaya?"
+    text_hi: "Chashma pehante hain? Apna hai ya kisi aur ka?"
+    text_deva: "चश्मा पहनते हैं? अपना है या किसी और का?"
     type: choice
     options:
-      - { value: none, label_hi: "Chashma nahin pehante" }
-      - { value: own, label_hi: "Apna chashma" }
-      - { value: someone_else, label_hi: "Kisi aur ka chashma" }
+      - { value: none, label_hi: "Chashma nahin pehante", label_deva: "चश्मा नहीं पहनते" }
+      - { value: own, label_hi: "Apna chashma", label_deva: "अपना चश्मा" }
+      - { value: someone_else, label_hi: "Kisi aur ka chashma", label_deva: "किसी और का चश्मा" }
     fills: { path: answers_only }
 
   - id: health
-    text_hi: "Sugar, BP, TB ki dawai? Aankh mein koi dawai daalte hain?"
+    text_hi: "Sugar, TB ki dawai? Aankh mein koi dawai daalte hain?"
+    text_deva: "शुगर, टीबी की दवाई? आँख में कोई दवाई डालते हैं?"
     type: multi
     readback: true
     none_value: none
     options:
-      - { value: diabetes, label_hi: "Sugar" }
-      - { value: tb_medicine, label_hi: "TB ki dawai" }
-      - { value: steroid_drops, label_hi: "Aankh mein dawai daalte hain" }
-      - { value: none, label_hi: "Inmein se kuch nahin" }
-    note: "BP is in the wording but the case record has no BP field yet (open question)."
+      - { value: diabetes, label_hi: "Sugar", label_deva: "शुगर" }
+      - { value: tb_medicine, label_hi: "TB ki dawai", label_deva: "टीबी की दवाई" }
+      - { value: steroid_drops, label_hi: "Aankh mein dawai daalte hain", label_deva: "आँख में दवाई डालते हैं" }
+      - { value: none, label_hi: "Inmein se kuch nahin", label_deva: "इनमें से कुछ नहीं" }
+    note: "BP was removed from the wording: the case record has no BP field (open question)."
     fills: { path: risks, mode: set_flags }
 
   # Adapt rule: a yes to sugar leads to "has your vision changed recently?"
   # Triage rule: diabetes OR TB medicine with a recent vision change is Red.
   - id: recent_change
     text_hi: "Kya haal mein aapki nazar badli hai?"
+    text_deva: "क्या हाल में आपकी नज़र बदली है?"
     type: yes_no
     readback: true
     ask_if: { any: [ { field: risks.diabetes, op: "==", value: true }, { field: risks.tb_medicine, op: "==", value: true } ] }
@@ -175,18 +190,20 @@ questions:
 
   - id: eye_history
     text_hi: "Aankh ka operation ya chot?"
+    text_deva: "आँख का ऑपरेशन या चोट?"
     type: multi
     readback: true
     none_value: none
     options:
-      - { value: eye_surgery, label_hi: "Operation hua hai" }
-      - { value: injury, label_hi: "Pehle chot lagi thi" }
-      - { value: none, label_hi: "Kuch nahin" }
+      - { value: eye_surgery, label_hi: "Operation hua hai", label_deva: "ऑपरेशन हुआ है" }
+      - { value: injury, label_hi: "Pehle chot lagi thi", label_deva: "पहले चोट लगी थी" }
+      - { value: none, label_hi: "Kuch nahin", label_deva: "कुछ नहीं" }
     fills: { path: risks, mode: set_flags }
 
   # Lens rule: 60+ and walks on field bunds or stairs -> separate readers, not bifocals.
   - id: walking
     text_hi: "Khet ki mendh ya seedhi par chalna hota hai?"
+    text_deva: "खेत की मेड़ या सीढ़ी पर चलना होता है?"
     type: yes_no
     readback: true
     ask_if: { field: person.age, op: ">=", value: 60 }
@@ -194,9 +211,10 @@ questions:
 
   - id: budget
     text_hi: "Chashme par kitna kharch theek rahega?"
+    text_deva: "चश्मे पर कितना खर्च ठीक रहेगा?"
     type: choice
     options:
-      - { value: low, label_hi: "Kam" }
-      - { value: medium, label_hi: "Beech ka" }
-      - { value: high, label_hi: "Zyada" }
+      - { value: low, label_hi: "Kam", label_deva: "कम" }
+      - { value: medium, label_hi: "Beech ka", label_deva: "बीच का" }
+      - { value: high, label_hi: "Zyada", label_deva: "ज़्यादा" }
     fills: { path: answers_only }

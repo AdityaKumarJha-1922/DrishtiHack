@@ -11,7 +11,8 @@ export type QuestionType = "yes_no" | "choice" | "multi" | "number";
 
 export interface Option {
   value: string | number;
-  label_hi: string;
+  label_hi: string; // Roman Hindi
+  label_deva?: string; // Devanagari
 }
 
 export interface Fill {
@@ -22,7 +23,8 @@ export interface Fill {
 
 export interface Question {
   id: string;
-  text_hi: string;
+  text_hi: string; // Roman Hindi
+  text_deva?: string; // Devanagari
   type: QuestionType;
   options?: Option[];
   none_value?: string;
@@ -33,6 +35,7 @@ export interface Question {
   danger_code?: string;
   readback?: boolean; // key answer: a voice answer is read back before saving
   unit_hi?: string; // said after a number in the read-back
+  unit_deva?: string;
   fills: Fill;
 }
 
@@ -54,7 +57,6 @@ export interface Rules {
   };
   lens_suggestions: { code: string; when: Condition }[];
   messages: Record<string, string>;
-  message_approval: Record<string, boolean>;
   phone_tests: {
     distance_chart: { distance_m: number; optotype_arcmin_at_6_6: number; letters_per_line: number; pass_correct: number; start_line: string };
     pinhole: { test: "worse_eye" };
@@ -66,7 +68,6 @@ export interface Rules {
   };
   speech: {
     readback_below_confidence: number;
-    readback_template_hi: string;
     max_readback_rejections: number;
     yes_words: string[];
     no_words: string[];

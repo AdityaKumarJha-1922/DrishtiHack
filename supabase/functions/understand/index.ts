@@ -28,10 +28,11 @@ Rules:
 
 interface QuestionIn {
   id: string;
-  text_hi: string;
+  text_hi: string; // Roman Hindi
+  text_deva?: string | null; // Devanagari
   type: string;
   path: string;
-  options: { value: string | number; label_hi: string }[];
+  options: { value: string | number; label_hi: string; label_deva?: string | null }[];
   min: number | null;
   max: number | null;
 }
@@ -67,11 +68,11 @@ Deno.serve(async (req) => {
   const { question, schema, transcript } = input;
 
   const optionsText = question.options.length
-    ? question.options.map((o) => `- ${JSON.stringify(o.value)}: ${o.label_hi}`).join("\n")
+    ? question.options.map((o) => `- ${JSON.stringify(o.value)}: ${o.label_hi}${o.label_deva ? ` / ${o.label_deva}` : ""}`).join("\n")
     : `A whole number${question.min !== null ? ` from ${question.min}` : ""}${question.max !== null ? ` to ${question.max}` : ""}.`;
   const userText = `Question id: ${question.id}
 Answer path: ${question.path}
-Question asked: ${question.text_hi}
+Question asked: ${question.text_hi}${question.text_deva ? ` / ${question.text_deva}` : ""}
 Answer type: ${question.type}
 Allowed values:
 ${optionsText}

@@ -3,7 +3,8 @@
 // read locally too. The procedure itself is the brain's (startChart/answerChart).
 import { useRef, useState } from "react";
 import {
-  answerChart, chartResult, optotypeHeightMm, parseDirection, startChart, RULES, type ChartState, type Direction,
+  answerChart, chartResult, optotypeHeightMm, parseDirection, startChart, t, RULES,
+  type ChartState, type Direction, type Script,
 } from "../../brain";
 import { startListening, voiceRoute, type Listening } from "../../services/stt";
 
@@ -13,13 +14,15 @@ interface Props {
   pxPerMm: number;
   voiceAllowed: boolean;
   onResult: (snellen: string, quality: { distance_ok: boolean; eye_covered: boolean }) => void;
+  script: Script;
 }
 
 const ROTATE: Record<Direction, number> = { right: 0, down: 90, left: 180, up: 270 };
+// Keys into customer_text.yaml.
 const INSTRUCTION: Record<Step, string> = {
-  distance_right: RULES.messages.chart_right_eye_hi,
-  distance_left: RULES.messages.chart_left_eye_hi,
-  pinhole: RULES.messages.chart_pinhole_hi,
+  distance_right: "chart_right_eye",
+  distance_left: "chart_left_eye",
+  pinhole: "chart_pinhole",
 };
 const HELPER: Record<Step, string> = {
   distance_right: "Right eye. The customer covers the LEFT eye.",
@@ -27,7 +30,7 @@ const HELPER: Record<Step, string> = {
   pinhole: "Pinhole: the customer looks through a pin-prick in a card with the worse eye, the other eye covered.",
 };
 
-export default function ChartTest({ step, pxPerMm, voiceAllowed, onResult }: Props) {
+export default function ChartTest({ step, pxPerMm, voiceAllowed, onResult, script }: Props) {
   const chart = RULES.phone_tests.distance_chart;
   const [ready, setReady] = useState({ distance_ok: false, eye_covered: false });
   const [started, setStarted] = useState(false);
@@ -63,7 +66,7 @@ export default function ChartTest({ step, pxPerMm, voiceAllowed, onResult }: Pro
   if (!started) {
     return (
       <div className="test-setup">
-        <p className="big-hi">{INSTRUCTION[step]}</p>
+        <p className="big-hi">{t(INSTRUCTION[step], script)}</p>
         <div className="sk-inline">
           <p>{HELPER[step]}</p>
           <label><input type="checkbox" checked={ready.distance_ok} onChange={(e) => setReady({ ...ready, distance_ok: e.target.checked })} /> The customer stands at the {chart.distance_m} m mark</label>
@@ -81,7 +84,7 @@ export default function ChartTest({ step, pxPerMm, voiceAllowed, onResult }: Pro
       <div className="e-area" aria-label="Tumbling E">
         <TumblingE size={sizePx} rotate={ROTATE[state.current]} />
       </div>
-      <p className="hint">{RULES.messages.chart_ask_hi}</p>
+      <p className="hint">{t("chart_ask", script)}</p>
       <div className="sk-inline">
         <p className="muted">Line {line} · letter {state.shown + 1} of up to {chart.letters_per_line}</p>
         <div className="dir-pad">

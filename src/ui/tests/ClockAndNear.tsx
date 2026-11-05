@@ -1,11 +1,11 @@
 // The clock dial question, and the two near tests (near point and working
 // distance) measured with the front camera, or typed in from a tape.
 import { useEffect, useRef, useState } from "react";
-import { distanceCm, optotypeHeightMm, steadyReading, RULES } from "../../brain";
+import { distanceCm, optotypeHeightMm, steadyReading, t, RULES, type Script } from "../../brain";
 import { startIrisCamera, type CameraStatus, type IrisCamera } from "./camera";
 import { TumblingE } from "./ChartTest";
 
-export function ClockDial({ onResult }: { onResult: (even: boolean) => void }) {
+export function ClockDial({ onResult, script }: { onResult: (even: boolean) => void; script: Script }) {
   const n = RULES.phone_tests.clock_dial.lines;
   return (
     <div className="question">
@@ -16,10 +16,10 @@ export function ClockDial({ onResult }: { onResult: (even: boolean) => void }) {
           return <line key={i} x1={-100 * Math.cos(a)} y1={-100 * Math.sin(a)} x2={100 * Math.cos(a)} y2={100 * Math.sin(a)} stroke="#000" strokeWidth="4" />;
         })}
       </svg>
-      <h1>{RULES.messages.clock_ask_hi}</h1>
+      <h1>{t("clock_ask", script)}</h1>
       <div className="options two">
-        <button className="choice" onClick={() => onResult(false)}>Haan</button>
-        <button className="choice" onClick={() => onResult(true)}>Nahin</button>
+        <button className="choice" onClick={() => onResult(false)}>{t("yes", script)}</button>
+        <button className="choice" onClick={() => onResult(true)}>{t("no", script)}</button>
       </div>
     </div>
   );
@@ -30,9 +30,10 @@ interface NearProps {
   pxPerMm: number;
   focalRatio: number | null; // null: no camera calibration, type the distance
   onResult: (cm: number) => void;
+  script: Script;
 }
 
-export function NearTest({ step, pxPerMm, focalRatio, onResult }: NearProps) {
+export function NearTest({ step, pxPerMm, focalRatio, onResult, script }: NearProps) {
   const near = RULES.phone_tests.near;
   const cam = RULES.phone_tests.camera;
   const video = useRef<HTMLVideoElement>(null);
@@ -63,9 +64,9 @@ export function NearTest({ step, pxPerMm, focalRatio, onResult }: NearProps) {
   const letterPx = optotypeHeightMm(near.target_snellen, near.target_at_cm / 100) * pxPerMm;
   return (
     <div className="question">
-      <h1>{step === "near_point" ? RULES.messages.near_point_hi : RULES.messages.working_distance_hi}</h1>
+      <h1>{t(step === "near_point" ? "near_point" : "working_distance", script)}</h1>
       {step === "near_point" && (
-        <div className="near-target" aria-label="Small letters">
+        <div className="near-target" aria-label={t("small_letters_label", script)}>
           {[0, 90, 180, 270, 90, 0].map((r, i) => <TumblingE key={i} size={letterPx} rotate={r} />)}
         </div>
       )}
