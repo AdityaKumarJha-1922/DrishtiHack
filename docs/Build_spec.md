@@ -27,6 +27,21 @@ See `src/brain/types.ts`. Change log against the shared spec:
 - Tap answers store `transcript: null`, `confidence: null`, `confirmed: true`.
 - `review` is `null` until the optometrist acts.
 
+## Voice understanding (Step 2)
+
+- The app sends `{ question, schema, transcript }` to `understand`. The schema
+  (from `replySchema()` in `src/brain/understanding.ts`) allows exactly:
+  `question_id` (the current one), `path` (its `fills.path`), `unclear` (boolean),
+  `value` (one of the question's allowed values, or null), `confidence` (0 to 1).
+- The reply is untrusted. `parseReply()` rejects malformed JSON, extra or missing
+  fields, the wrong question or path, invalid values, bad confidence, and
+  unclear/value conflicts. On the danger question, a "no danger" reply is
+  rejected when danger words from `symptom_words.csv` are in the transcript.
+- A gated answer only pre-selects an option; the customer confirms by tap. Its
+  transcript and confidence are saved in `answers[]` only if kept.
+- `speech.readback_below_confidence` (rules.yaml, provisional): below it, Step 3
+  must read the answer back. Confidence never affects triage.
+
 ## Triage (v0, from rules.yaml)
 
 - **Red:** any danger sign; diabetes or TB medicine with a recent vision change;

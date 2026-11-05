@@ -52,6 +52,7 @@ export interface Rules {
   };
   lens_suggestions: { code: string; when: Condition }[];
   messages: Record<string, string>;
+  speech: { readback_below_confidence: number };
 }
 
 export interface SymptomWord {

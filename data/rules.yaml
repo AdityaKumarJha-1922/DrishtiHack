@@ -60,3 +60,9 @@ messages:
   red_shopkeeper_en: "Danger sign reported. Stop here: refer to an eye doctor today. Case marked urgent for the optometrist."
   done_customer_hi: "Dhanyavaad. Ab kuch aasaan jaanch hogi."
   retina_check_reason: yearly_retina_check
+
+speech:
+  # TECHNICAL setting, not clinical (provisional, needs review): a voice answer
+  # whose model confidence (0 to 1) is below this is always read back or sent
+  # to taps (Step 3). Confidence never affects triage or any clinical decision.
+  readback_below_confidence: 0.8

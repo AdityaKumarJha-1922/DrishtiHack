@@ -62,3 +62,14 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .sk-note { background: #334155; padding: 8px; border-radius: 6px; }
 .sk-error { color: #fca5a5; }
 .json { max-height: 300px; overflow: auto; background: #0f172a; padding: 8px; font-size: 12px; border-radius: 6px; }
+
+/* Step 2: voice */
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
+.mic {
+  min-height: 48px; padding: 8px 18px; font-size: 18px; border-radius: 10px;
+  border: 2px solid #15803d; background: #fff; color: #15803d;
+}
+.mic.listening { background: #15803d; color: #fff; }
+.voice-note { font-size: 19px; color: #1e3a8a; margin: 8px 0 0; }
+.sk-voice { background: #334155; padding: 8px; border-radius: 6px; margin-top: 8px; }
+.sk-voice p { margin: 4px 0; }

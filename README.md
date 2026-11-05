@@ -28,14 +28,25 @@ npm run build      # type-check + production build
 | `data/symptom_words.csv`, `data/occupations.csv` | Word list and job table (clinical lead edits). |
 | `tests/` | Vitest: golden cases and interview flow. |
 
-## Status (M1, Step 1 done)
+## Status (M1, Steps 1 and 2 done)
 
-Done: brain module, data files, 18 passing tests, tap-only interview screen with
-truthful progress, repeat button (phone's Hindi voice if present), Next/Redo in the
-shopkeeper panel, Red stop that Redo cannot undo.
+Step 1: brain module, data files, tap interview screen with truthful progress,
+repeat button, Next/Redo in the shopkeeper panel, Red stop that Redo cannot undo.
 
-Not yet: speech services and the LLM (Step 2), read-back (Step 3), saving to
-Supabase (Step 5), phone tests (M2), optometrist portal, offline service worker.
+Step 2: Edge Functions `stt`, `tts`, `understand` (see `supabase/README.md`);
+voice answers after consent, which only pre-select an option the customer
+confirms by tap; the brain's gate (`src/brain/understanding.ts`) rejects any
+model reply that is malformed, off-question or outside the allowed values, and
+takes the safer route when danger words are heard. 33 passing tests.
+
+Not yet: spoken read-back (Step 3), saving to Supabase (Step 5), real-phone
+latency (Step 6), phone tests (M2), optometrist portal, offline service worker.
+
+## Voice setup
+
+Copy `.env.example` to `.env.local` with your Supabase URL and anon key, and deploy
+the functions. Without these the app works by taps only (and may use Chrome's own
+Hindi recognition when online).
 
 ## Known differences from the spec / open decisions
 
@@ -50,4 +61,14 @@ Supabase (Step 5), phone tests (M2), optometrist portal, offline service worker.
 - **`suggestion.explain`** stays null until approved Hindi wording exists.
 - **Script:** question text is romanised Hindi as in the spec; Devanagari is a decision
   for the clinical lead (it also affects how the phone voice reads it).
+- **Saarika is legacy.** `stt` defaults to `saarika:v2.5` as specified; Sarvam
+  now recommends `saaras:v3`. Switch with the `SARVAM_STT_MODEL` secret.
+- **No server-side model fallback.** The `understand` function never switches
+  model on refusal or unavailability; the app falls back to taps instead.
+- **Read-back threshold** `speech.readback_below_confidence: 0.8` in `rules.yaml` is
+  a provisional technical setting, not clinical; it needs review.
+- **Danger words heard later** (after the danger question) raise a shopkeeper alert
+  but cannot yet be recorded in the case: there is no "late danger sign" path.
+- **Devanagari danger phrases** were added to `symptom_words.csv` because Sarvam and
+  Chrome return Hindi in Devanagari; they are dev transliterations to be checked.
 - `created_at` is stored in UTC (`Z`) rather than `+05:30`; both are valid ISO times.

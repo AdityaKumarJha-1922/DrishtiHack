@@ -6,7 +6,7 @@
 import { useState } from "react";
 import {
   applyAnswer, createCase, isStopped, nextQuestion, progress, undoLast, RULES,
-  type AnswerValue, type CaseRecord,
+  type AnswerMeta, type AnswerValue, type CaseRecord, type Understanding,
 } from "../brain";
 import QuestionScreen from "./QuestionScreen";
 
@@ -23,6 +23,9 @@ export default function App() {
   const [pending, setPending] = useState<AnswerValue | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showJson, setShowJson] = useState(false);
+  // What voice understanding last produced, shown to the shopkeeper. Its
+  // transcript and confidence are saved only if the customer keeps that answer.
+  const [voice, setVoice] = useState<{ u: Understanding; transcript: string | null } | null>(null);
 
   const question = nextQuestion(record);
   const stopped = isStopped(record);
@@ -31,11 +34,16 @@ export default function App() {
   // Every answer goes through the brain; a rejected answer changes nothing.
   function submit() {
     if (!question || pending === null) return;
-    const result = applyAnswer(record, question.id, pending);
+    const fromVoice = voice?.u.kind === "answer" && JSON.stringify(voice.u.value) === JSON.stringify(pending);
+    const meta: AnswerMeta = fromVoice && voice?.u.kind === "answer"
+      ? { transcript: voice.transcript, confidence: voice.u.confidence, confirmed: true }
+      : {}; // a tap answer
+    const result = applyAnswer(record, question.id, pending, meta);
     if (result.ok) {
       setRecord(result.record);
       setPending(null);
       setError(null);
+      setVoice(null);
     } else {
       setError(result.error);
     }
@@ -47,6 +55,7 @@ export default function App() {
       setRecord(result.record);
       setPending(null);
       setError(null);
+      setVoice(null);
     } else {
       setError(result.error);
     }
@@ -57,6 +66,7 @@ export default function App() {
       setRecord(newCase());
       setPending(null);
       setError(null);
+      setVoice(null);
     }
   }
 
@@ -81,6 +91,8 @@ export default function App() {
               value={pending}
               onChange={(v) => { setPending(v); setError(null); }}
               onSubmit={submit}
+              voiceAllowed={record.consent.given === true}
+              onVoice={(u, transcript) => setVoice({ u, transcript })}
             />
             {error && <p className="retry" role="alert">Kripya dobara chuniye.</p>}
           </>
@@ -104,6 +116,7 @@ export default function App() {
           </p>
         )}
         {error && <p className="sk-error">Not accepted: {error}</p>}
+        {voice && <VoicePanel u={voice.u} transcript={voice.transcript} />}
 
         <div className="sk-buttons">
           <button onClick={submit} disabled={!question || pending === null}>Next</button>
@@ -116,6 +129,30 @@ export default function App() {
         </div>
         {showJson && <pre className="json">{JSON.stringify(record, null, 2)}</pre>}
       </section>
+    </div>
+  );
+}
+
+// Shopkeeper view of the last voice attempt. Raw transcripts are shown here
+// for checking, never logged or sent anywhere else.
+function VoicePanel({ u, transcript }: { u: Understanding; transcript: string | null }) {
+  return (
+    <div className="sk-voice">
+      {u.dangerWordsHeard.length > 0 && (
+        <p className="sk-alert">
+          Possible danger words heard: {u.dangerWordsHeard.join(", ")}. Check with the customer now. If they have this
+          now, stop and refer to an eye doctor today.
+        </p>
+      )}
+      {transcript && <p>Heard: “{transcript}”</p>}
+      {u.kind === "answer" && (
+        <p>
+          Voice pre-selected an answer (confidence {u.confidence.toFixed(2)}
+          {u.needsReadback ? ", low: confirm with the customer" : ""}). Customer must confirm with a tap.
+        </p>
+      )}
+      {u.kind === "unclear" && <p>Voice answer unclear. Customer should tap.</p>}
+      {u.kind === "rejected" && <p>Voice not used ({u.reason}). Customer should tap.</p>}
     </div>
   );
 }
