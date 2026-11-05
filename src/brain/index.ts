@@ -11,3 +11,8 @@ export { replySchema, questionForModel, parseReply, dangerWordsIn } from "./unde
 export type { ModelReply, Understanding } from "./understanding";
 export { voiceAction, readbackText, parseYesNo, isDangerValue } from "./readback";
 export { isUrgent, reportDangerLater, reportableDangerSigns, LATE_REPORT_PREFIX } from "./danger";
+export {
+  optotypeHeightMm, startChart, answerChart, chartResult, randomPick, parseDirection, irisDiameterPx, focalRatio,
+  distanceCm, steadyReading, pinholeNeeded, pinholeEye, nearTestsNeeded, nextTest, applyTestResult, DIRECTIONS,
+} from "./phoneTests";
+export type { Direction, ChartState, Pick, Point, TestStep } from "./phoneTests";

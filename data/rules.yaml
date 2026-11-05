@@ -7,7 +7,8 @@ version: 0
 status: draft_awaiting_clinical_approval
 
 # Snellen lines, best to worst, used to count "lines" of change.
-snellen_lines: ["6/6", "6/9", "6/12", "6/18", "6/24", "6/36", "6/60"]
+# "<6/60" = could not read the largest line (proposal: the spec has no value for it).
+snellen_lines: ["6/6", "6/9", "6/12", "6/18", "6/24", "6/36", "6/60", "<6/60"]
 
 triage:
   # Distance vision worse than this in either eye is "reduced".
@@ -61,10 +62,26 @@ messages:
   draft_message_en: "The customer's message above is DRAFT wording, not yet approved by the clinical lead."
   done_customer_hi: "Dhanyavaad. Ab kuch aasaan jaanch hogi."
   retina_check_reason: yearly_retina_check
+  # M2 phone tests: customer instructions (DRAFT wording, dev team).
+  tests_intro_hi: "Ab kuch aasaan jaanch. Dukaandaar aapki madad karenge."
+  chart_right_eye_hi: "Baayin aankh hatheli se dhakiye. Sirf daayin aankh se dekhiye."
+  chart_left_eye_hi: "Daayin aankh hatheli se dhakiye. Sirf baayin aankh se dekhiye."
+  chart_pinhole_hi: "Card ke chhote chhed se, isi aankh se dekhiye."
+  chart_ask_hi: "E ki tangein kis taraf hain? Upar, neeche, daayen ya baayen?"
+  clock_ask_hi: "Dono aankhon se dekhiye. Kya koi line baaki linon se zyada gehri ya kaali dikhti hai?"
+  near_point_hi: "Phone ko haath bhar door se dheere dheere paas laaiye. Jab akshar dhundhle hone lagein, ruk jaaiye."
+  working_distance_hi: "Phone ko waise pakadiye jaise aap apna kaam pakadte hain."
+  # Result shown to the customer (DRAFT; see message_approval). Never a prescription.
+  result_green_hi: "Aapke liye padhne ka chashma aazma kar dekhenge. Optometrist isse pakka karenge."
+  result_amber_hi: "Aapki aankhon ki poori jaanch zaroori hai. Hum iske liye samay tay karenge."
+  result_pending_hi: "Dhanyavaad. Optometrist aapka case dekh kar batayenge."
 
 # Set a message to true only after the clinical lead approves its exact wording.
 message_approval:
   red_customer_hi: false
+  result_green_hi: false
+  result_amber_hi: false
+  result_pending_hi: false
 
 speech:
   # TECHNICAL setting, not clinical (provisional, needs review): a voice answer
@@ -80,3 +97,38 @@ speech:
   # (no network, no LLM). Both found, or neither, means unclear -> taps.
   yes_words: [haan, haa, han, ha, ji, jee, sahi, theek, thik, bilkul, "हाँ", "हां", "हा", "जी", "सही", "ठीक", "बिल्कुल"]
   no_words: [nahin, nahi, nai, na, galat, "नहीं", "नही", "ना", "गलत"]
+
+# M2 phone tests. These SCREEN and ESTIMATE; they are not an eye examination.
+# Every item marked "proposal" is a dev-team proposal awaiting clinical approval:
+# the spec names the tests but not their procedure.
+phone_tests:
+  distance_chart:
+    distance_m: 3                 # spec: tumbling E at 3 m (tape mark on the floor)
+    optotype_arcmin_at_6_6: 5     # standard: a 6/6 letter is 5 arc-minutes tall
+    letters_per_line: 5           # proposal
+    pass_correct: 3               # proposal: a line is read if at least 3 of 5 are right
+    start_line: "6/60"            # proposal: start at the largest line and go down
+  pinhole:
+    # spec: pinhole step when distance vision is reduced (worse than triage.reduced_worse_than)
+    test: worse_eye               # proposal: re-test the worse eye (the record has one pinhole value)
+  clock_dial:
+    lines: 6                      # proposal: 6 lines through the centre (every 30 degrees)
+  near:
+    # Near point target: one row of small Es (proposal: 6/12 size at 40 cm, about 1.2 mm).
+    target_snellen: "6/12"
+    target_at_cm: 40
+    # Near tests run when the reading block applies (same rule as questions.yaml near_work).
+    run_if: { any: [ { field: person.age, op: ">=", value: 40 }, { field: symptoms, op: includes, value: near_blur } ] }
+  camera:
+    iris_diameter_mm: 11.7        # population average used as a ruler (MediaPipe Iris)
+    calibration_distance_cm: 40   # the phone is held 40 cm away, measured with a tape, once per phone
+    min_cm: 10                    # readings outside this range are rejected as unreliable
+    max_cm: 100
+    samples: 10                   # average this many camera frames for one reading
+  id1_card_mm: { width: 85.6, height: 53.98 }   # ATM/RuPay card (ISO/IEC 7810 ID-1), for screen size
+  # Spoken answers for the chart, matched as whole words locally (draft word lists).
+  direction_words:
+    up: [upar, oopar, uppar, "ऊपर", "उपर"]
+    down: [neeche, niche, neche, "नीचे", "निचे"]
+    left: [baayen, bayen, baaye, baye, baen, left, "बाएं", "बायें", "बाएँ", "बाये"]
+    right: [daayen, dayen, daaye, daye, daen, right, "दाएं", "दायें", "दाएँ", "दाये"]

@@ -87,6 +87,27 @@ voice is off for that question. The shopkeeper's Next is disabled during a read-
   `case-audio` bucket at `<case_id>/<answer_index>-<q>.webm`; that path goes in the
   existing `answers[i].audio_url`. No retention period yet (open decision).
 
+## Phone tests (M2)
+
+Order (`nextTest()`): right eye, left eye, pinhole (if the worse eye is worse than
+6/12), clock dial, near point and working distance (if `phone_tests.near.run_if`).
+Results go only through `applyTestResult()`, which refuses a Red case, steps out of
+order, values that are not chart lines, and distances outside 10–100 cm.
+
+- Chart: tumbling E at 3 m; letter height = 3000 mm × tan(5′ × x/6) for line 6/x,
+  drawn at the calibrated px/mm. Start at 6/60; a line is read with 3 of 5 right;
+  stop at the first line not read; result = smallest line read, or "<6/60".
+- Clock dial: 6 lines; "is any line darker?" yes = uneven.
+- Near point: a row of Es sized 6/12 at 40 cm; the customer brings the phone closer
+  until it blurs. Working distance: "hold it where you hold your work".
+- Distance from the camera: iris diameter (MediaPipe landmarks 469/471, 474/476)
+  with an 11.7 mm iris as the ruler; focal ratio from a once-per-phone 40 cm hold;
+  the median of 10 frames, kept only if 10–100 cm. Otherwise typed in from a tape.
+- Quality: `distance_ok` and `eye_covered` are set from the helper's ticks before each
+  chart; `light_ok` stays null.
+- All numbers above are in `rules.yaml` (`phone_tests`); procedure details are
+  proposals awaiting clinical approval.
+
 ## Triage (v0, from rules.yaml)
 
 - **Red:** any danger sign; diabetes or TB medicine with a recent vision change;

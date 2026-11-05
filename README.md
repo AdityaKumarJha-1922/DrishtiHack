@@ -28,7 +28,7 @@ npm run build      # type-check + production build
 | `data/symptom_words.csv`, `data/occupations.csv` | Word list and job table (clinical lead edits). |
 | `tests/` | Vitest: golden cases and interview flow. |
 
-## Status (M1, Steps 1 to 5 done)
+## Status (M1 Steps 1 to 5, and M2 phone tests, done)
 
 Step 1: brain module, data files, tap interview screen with truthful progress,
 repeat button, Next/Redo in the shopkeeper panel, Red stop that Redo cannot undo.
@@ -62,7 +62,23 @@ and its private path goes in `answers[i].audio_url`. The shopkeeper sees "Saved"
 when the server confirmed it; "New case" stays disabled until a Red case is saved
 (only a failed save allows discarding it, after a hard warning). 69 passing tests.
 
-Not yet: real-phone
+M2: after the interview, the phone tests run in the order the brain asks for
+(`nextTest()` in `src/brain/phoneTests.ts`): tumbling-E chart at 3 m for each eye
+(helper taps, or a spoken direction read locally), a pinhole re-test of the worse eye
+when vision is reduced, the clock dial, then (40+ or a near complaint) the near
+point and working distance, measured by the front camera from iris size or typed
+in from a tape. Then `decide()` gives the profile card: Green/Amber/Red with
+reasons and, for Green, a PRELIMINARY reading-glasses power plus the stock powers to
+try. A once-per-phone setup sizes the screen with an ATM card and calibrates the
+camera at a tape-measured 40 cm. All seven golden cases pass end to end through the
+real interview and test procedures. 84 passing tests.
+
+The camera uses MediaPipe Face Landmarker (`@mediapipe/tasks-vision`); its wasm is
+copied from `node_modules` into `public/mediapipe` before dev/build (not committed)
+and the face model is bundled in `public/models`, so it works offline. They load
+only when a camera step starts.
+
+Not yet: optometrist portal (queue, case view, approve/edit), real-phone
 latency (Step 6), phone tests (M2), optometrist portal, offline service worker.
 
 ## Voice setup
@@ -96,6 +112,18 @@ Hindi recognition when online).
   plus "Aage" is the confirmation.
 - **Red safety message is not approved.** `message_approval.red_customer_hi: false`
   in `rules.yaml`; the shopkeeper sees a draft notice until it is set to true.
+- **M2 test procedures are proposals.** Letters per line (5), pass mark (3), starting
+  line (6/60), the near target size (6/12 at 40 cm), "<6/60" for an unreadable chart,
+  and re-testing only the worse eye with the pinhole are in `rules.yaml` as proposals
+  awaiting clinical approval. The phone tests screen and estimate; they have not
+  been compared with an optometrist's exam yet (that is the M3 pilot).
+- **Customer test instructions and result messages are draft Hindi.**
+- **`light_ok` is not checked** (no reliable light sensor in browsers); `distance_ok`
+  and `eye_covered` are the helper's ticks, not camera checks (quality checks are Should).
+- **The camera download is large** (about 13 MB of wasm plus a 3.6 MB model), fetched
+  once when a camera step first runs; slow on a weak network.
+- **The case saves when the tests finish** (or at once on Red), not between the
+  interview and the tests.
 - **Anyone with the anon key can call `save_case`.** Shops should sign in (Supabase
   Auth) so a case is tied to a real shop; `shop_id` is a fixed placeholder for now.
 - **No audio retention period** is applied: the spec has none. Needs a decision.

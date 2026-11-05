@@ -8,9 +8,14 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "preview": "vite preview --host"
+    "preview": "vite preview --host",
+    "copy-mediapipe": "node scripts/copy-mediapipe.mjs",
+    "predev": "npm run copy-mediapipe",
+    "prebuild": "npm run copy-mediapipe",
+    "prepreview": "npm run copy-mediapipe"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "1.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "yaml": "^2.6.0"

@@ -55,6 +55,15 @@ export interface Rules {
   lens_suggestions: { code: string; when: Condition }[];
   messages: Record<string, string>;
   message_approval: Record<string, boolean>;
+  phone_tests: {
+    distance_chart: { distance_m: number; optotype_arcmin_at_6_6: number; letters_per_line: number; pass_correct: number; start_line: string };
+    pinhole: { test: "worse_eye" };
+    clock_dial: { lines: number };
+    near: { target_snellen: string; target_at_cm: number; run_if: Condition };
+    camera: { iris_diameter_mm: number; calibration_distance_cm: number; min_cm: number; max_cm: number; samples: number };
+    id1_card_mm: { width: number; height: number };
+    direction_words: Record<"up" | "down" | "left" | "right", string[]>;
+  };
   speech: {
     readback_below_confidence: number;
     readback_template_hi: string;

@@ -5,13 +5,15 @@
 // object; calling its setter redraws the screen with the new value.
 import { useEffect, useRef, useState } from "react";
 import {
-  applyAnswer, createCase, isStopped, nextQuestion, progress, reportDangerLater, reportableDangerSigns,
+  applyAnswer, createCase, decide, isStopped, nextQuestion, nextTest, progress, reportDangerLater, reportableDangerSigns,
   undoLast, voiceAction, RULES,
   type AnswerMeta, type AnswerValue, type CaseRecord, type Understanding,
 } from "../brain";
 import QuestionScreen from "./QuestionScreen";
 import { speak } from "../services/tts";
 import { saveCase } from "../services/save";
+import TestFlow from "./tests/TestFlow";
+import { customerResultText, ShopkeeperResult } from "./tests/ResultCard";
 
 const SHOP_ID = "shop-01"; // set per shop later
 
@@ -44,7 +46,10 @@ export default function App() {
   const question = nextQuestion(record);
   const stopped = isStopped(record);
   const { answered, atMost } = progress(record);
-  const finished = stopped || !question;
+  // After the interview come the phone tests (M2); the case is finished when
+  // they are done (the record then carries decide()'s result) or it is Red.
+  const testStep = !stopped && !question ? nextTest(record) : null;
+  const finished = stopped || (!question && testStep === null);
   const recordJson = JSON.stringify(record);
   const isSaved = savedJson === recordJson;
 
@@ -78,7 +83,10 @@ export default function App() {
     const result = applyAnswer(record, question.id, value, meta);
     if (result.ok) {
       if (recording) audio.current.set(index, recording);
-      setRecord(result.record);
+      // If this answer ends an interview whose tests are already done (after a
+      // Redo), the brain decides again; otherwise the result would be missing.
+      const r = result.record;
+      setRecord(!isStopped(r) && !nextQuestion(r) && !nextTest(r) ? decide(r) : r);
       setPending(null);
       setError(null);
       setVoice(null);
@@ -189,9 +197,12 @@ export default function App() {
             />
             {error && <p className="retry" role="alert">Kripya dobara chuniye.</p>}
           </>
+        ) : testStep ? (
+          <TestFlow record={record} voiceAllowed={record.consent.given === true} onRecord={setRecord} onError={setError} />
         ) : (
           <div className="end-screen">
-            <p className="big">{RULES.messages.done_customer_hi}</p>
+            <p className="big">{customerResultText(record).text}</p>
+            <button className="repeat" onClick={() => speak(customerResultText(record).text)} aria-label="Dobara suniye">🔁 Dobara suniye</button>
           </div>
         )}
       </main>
@@ -209,11 +220,8 @@ export default function App() {
           </div>
         )}
         {stopped && !RULES.message_approval.red_customer_hi && <p className="sk-note">{RULES.messages.draft_message_en}</p>}
-        {!stopped && !question && (
-          <p className="sk-note">
-            Interview complete. Tests come next (M2). Nothing here is final until the remote optometrist reviews the case.
-          </p>
-        )}
+        {!stopped && !question && testStep && <p className="sk-note">Interview complete. Phone tests: {testStep.replace(/_/g, " ")}.</p>}
+        {finished && !stopped && <ShopkeeperResult record={record} />}
         {finished && <SaveStatus state={save.state} reason={save.reason} saved={isSaved} onRetry={doSave} />}
         {error && <p className="sk-error">Not accepted: {error}</p>}
         {voice && <VoicePanel u={voice.u} transcript={voice.transcript} />}
