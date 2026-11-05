@@ -1,0 +1,62 @@
+# NetraSaathi decision rules, v0. Owned by the clinical lead.
+# Every threshold here is a DRAFT from the Build spec and must be checked
+# with the optometrist before the pilot. Items marked "proposal" are the dev
+# team's interpretation where the spec was not exact.
+
+version: 0
+status: draft_awaiting_clinical_approval
+
+# Snellen lines, best to worst, used to count "lines" of change.
+snellen_lines: ["6/6", "6/9", "6/12", "6/18", "6/24", "6/36", "6/60"]
+
+triage:
+  # Distance vision worse than this in either eye is "reduced".
+  reduced_worse_than: "6/12"
+  # The pinhole "improves" vision when it gains at least this many lines.
+  pinhole_improves_lines: 2
+  # Green needs at least this age.
+  green_min_age: 40
+  # "One eye clearly worse" (proposal: the spec does not define "clearly").
+  one_eye_worse_lines: 2
+  # Under this age, a near complaint sends the case to a full test.
+  near_complaint_full_test_under_age: 40
+  near_complaints: [near_blur, eye_strain]
+
+reading_power:
+  # add = 100 / work_cm - share * (100 / near_point_cm)
+  reserve_share: 0.5
+  round_to: 0.25
+  # The trial tries the suggested power and one step either side.
+  trial_step: 0.5
+  # Age sanity table for reading at 40 cm (shown to the optometrist, not used
+  # to change the number).
+  age_table_40cm:
+    - { age: 45, add: 1.0 }
+    - { age: 50, add: 1.5 }
+    - { age: 55, add: 2.0 }
+    - { age: 60, add: 2.5 }
+
+lens_suggestions:
+  # code -> when it applies (same condition format as ask_if in questions.yaml;
+  # "answer.<id>" reads a stored interview answer). Codes are shown to the
+  # optometrist in English; they are preliminary until the optometrist approves.
+  - code: single_vision_readers
+    when: { field: triage.result, op: "==", value: green }
+  - code: office_lenses_after_full_test        # counter or desk work, near + middle distance
+    when: { all: [ { field: person.occupation, op: in, value: [shopkeeper, office_worker] }, { field: triage.result, op: "==", value: amber } ] }
+  - code: anti_glare_driving_lenses
+    when: { field: answer.driving, op: "==", value: night }
+  - code: uv_or_photochromic                   # works outdoors
+    when: { any: [ { field: person.occupation, op: in, value: [farmer, labourer] }, { field: answer.sun, op: ">=", value: 3 } ] }
+  - code: polycarbonate                        # labourer (child not in the adult flow)
+    when: { field: person.occupation, op: "==", value: labourer }
+  - code: separate_readers_not_bifocals
+    when: { all: [ { field: person.age, op: ">=", value: 60 }, { field: answer.walking, op: "==", value: yes } ] }
+
+messages:
+  # Customer-facing wording. Hindi text here is a DRAFT: there is no
+  # approved clinical wording yet. Do not ship to customers before approval.
+  red_customer_hi: "[DRAFT, needs approval] Kripya aaj hi aankh ke doctor ko dikhaiye."
+  red_shopkeeper_en: "Danger sign reported. Stop here: refer to an eye doctor today. Case marked urgent for the optometrist."
+  done_customer_hi: "Dhanyavaad. Ab kuch aasaan jaanch hogi."
+  retina_check_reason: yearly_retina_check
